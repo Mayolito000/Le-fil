@@ -1,5 +1,6 @@
 // Configuration Cloudflare de Le Fil.
-//   npx wrangler deploy --env test   -> version de test (le-fil-test.<sous-domaine>.workers.dev)
+//   npx wrangler deploy --env test   -> version de test (le-fil-test.<sous-domaine>.workers.dev), relève au repos
+//   npx wrangler deploy --env test --var RELEVE:oui   -> version de test avec sa propre relève (penser à la remettre au repos)
 //   npx wrangler deploy              -> le vrai site (le-fil.<sous-domaine>.workers.dev)
 // Les secrets SYNC_KEY et NTFY_TOPIC se règlent à part (npx wrangler secret put SYNC_KEY) : jamais ici.
 {
@@ -25,7 +26,9 @@
       "d1_databases": [{ "binding": "DB", "database_name": "le-fil", "database_id": "4a563326-ad2f-44f3-90f8-416f6c03ce1b" }],
       "durable_objects": { "bindings": [{ "name": "RELEVEUR", "class_name": "Releveur" }] },
       "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Releveur"] }],
-      "triggers": { "crons": ["*/10 * * * *"] },
+      // Au repos par défaut : la version de test ne relève rien tant qu'on ne met pas RELEVE à "oui"
+      "vars": { "RELEVE": "non" },
+      "triggers": { "crons": [] },
       "observability": { "enabled": true, "head_sampling_rate": 1 }
     }
   }

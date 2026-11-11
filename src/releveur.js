@@ -24,6 +24,9 @@ const GARDE = 48 * 3600e3;
 const MAX_ENTREES = 100;                                  // entrées lues par flux
 const PARMI = new Map(FLUX.map(f => [f.u, f]));
 
+// Variable RELEVE = "non" (version de test au repos) : le Releveur ne relève rien et ne répond pas,
+// la page relève alors elle-même les flux. Évite que deux serveurs lisent les mêmes médias en double.
+const actif = env => !env || env.RELEVE !== "non";
 const rythme = f => f.g ? RYTHME_GOOGLE : (RYTHME[f.t] || 120e3);
 const cp = n => { try { return String.fromCodePoint(n); } catch (e) { return ""; } };
 const xml = s => !s ? "" : s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (m, c) => c.replace(/&/g, "\u0000"))
@@ -95,7 +98,7 @@ export class Releveur extends DurableObject {
       this.etat = row ? JSON.parse(row.v) : {epoch: crypto.randomUUID().slice(0, 8), flux: {}, purge: 0};
       if (!row) this.sauver();
       this.sauve = Date.now();
-      if (!(await ctx.storage.getAlarm())) await ctx.storage.setAlarm(Date.now() + 1000);
+      if (actif(env) && !(await ctx.storage.getAlarm())) await ctx.storage.setAlarm(Date.now() + 1000);
     });
   }
 
@@ -124,6 +127,7 @@ export class Releveur extends DurableObject {
 
   /* ---------- Un passage : lit les flux arrivés à échéance ---------- */
   async alarm() {
+    if (!actif(this.env)) return;                    // au repos : on ne reprogramme rien
     try { await this.passage(); }
     catch (e) { console.error("passage", e && e.stack || String(e)); }
     finally {
@@ -230,6 +234,7 @@ export class Releveur extends DurableObject {
 
   async fetch(request) {
     const url = new URL(request.url);
+    if (!actif(this.env)) return new Response("Relève en pause sur cette version", {status: 503});
     if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 1000);
     if (url.pathname === "/direct") {
       if (request.headers.get("upgrade") !== "websocket") return new Response("WebSocket attendu", {status: 426});
