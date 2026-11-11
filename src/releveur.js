@@ -4,17 +4,21 @@
  * Relève tous les flux de flux.json en continu, même quand aucune page n'est ouverte :
  *   - chaque flux est relu toutes les 30 s à 5 min selon son rang (t), jamais plus souvent que
  *     ce que le média autorise (Cache-Control), et en demandant seulement s'il a changé (ETag) ;
- *   - toute dépêche nouvelle (ou dont le titre change) est gardée 48 h dans la table « entrees » ;
- *   - elle est aussitôt poussée aux pages ouvertes (WebSocket), qui la montrent dans la seconde.
- * Une page qui s'ouvre récupère d'un coup ce qu'elle a manqué (/fil?depuis=…).
+ *   - toute dépêche nouvelle (ou dont le titre change) est gardée 30 jours dans la table « entrees »
+ *     (les pages n'en reçoivent que les 48 dernières heures ; les 30 jours servent à la recherche) ;
+ *   - elle est aussitôt poussée aux pages ouvertes (WebSocket), qui la montrent dans la seconde ;
+ *   - les pages d'accueil des rédactions (flux « pa ») disent quels sujets sont « à la une ».
+ * Il prévient aussi les téléphones abonnés (Web Push) : infos majeures, nouveaux articles des sujets
+ * suivis et des mots-clés, point du matin à 7 h 30, et panne de la relève (vérifiée toutes les 10 min).
  *
  * Limites de l'offre gratuite respectées : au plus 30 flux par passage (50 sous-requêtes permises),
  * un passage toutes les 10 s au plus, peu d'écritures (on n'écrit que ce qui change).
  */
 import {DurableObject} from "cloudflare:workers";
 import FLUX from "../flux.json";
-import {versItem, marquerLots, analyser} from "./majeures.js";
+import {versItem, marquerLots, analyser, parseTerms, matchAlts, norm, escRe, cleLien} from "./majeures.js";
 import {envoyer, endpointValide, nouvellesCles} from "./webpush.js";
+import {decoder, lire, empreinte, explique, paris} from "./lecture.js";
 
 const UA = "Mozilla/5.0 (compatible; LeFil/1.0; lecteur RSS personnel)";
 const RYTHME = {1: 30e3, 2: 60e3, 3: 120e3, 4: 300e3};   // délai entre deux lectures d'un flux, selon son rang t
@@ -22,72 +26,21 @@ const RYTHME_GOOGLE = 600e3;                              // Google Actualités 
 const MAX_PAR_PASSAGE = 30;
 const SIMULTANES = 6;
 const PAS_MIN = 10e3;                                     // au plus un passage toutes les 10 s
-const GARDE = 48 * 3600e3;
+const GARDE = 48 * 3600e3;                                // ce que reçoivent les pages et ce qu'analyse le repérage
+const MEMOIRE = 30 * 864e5;                               // ce que garde la base (recherche)
 const MAX_ENTREES = 100;                                  // entrées lues par flux
+const PANNE = 30 * 60e3;                                  // relève en panne : rien lu depuis 30 min
 const PARMI = new Map(FLUX.map(f => [f.u, f]));
 
 // Variable RELEVE = "non" (version de test au repos) : le Releveur ne relève rien et ne répond pas,
 // la page relève alors elle-même les flux. Évite que deux serveurs lisent les mêmes médias en double.
 const actif = env => !env || env.RELEVE !== "non";
 const rythme = f => f.g ? RYTHME_GOOGLE : (RYTHME[f.t] || 120e3);
-const cp = n => { try { return String.fromCodePoint(n); } catch (e) { return ""; } };
-const xml = s => !s ? "" : s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (m, c) => c.replace(/&/g, "\u0000"))
-  .replace(/&#x([0-9a-f]+);/gi, (m, n) => cp(parseInt(n, 16))).replace(/&#(\d+);/g, (m, n) => cp(+n))
-  .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&")
-  .replace(/\u0000/g, "&");
-const sansBalises = s => s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-const coupe = (s, n) => s.length > n ? s.slice(0, n) : s;
-
-function decoder(buf, ct) {
-  let cs = (/charset=["']?([\w-]+)/i.exec(ct || "") || [])[1];
-  if (!cs) cs = (/encoding=["']([\w-]+)["']/i.exec(new TextDecoder("latin1").decode(buf.slice(0, 300))) || [])[1];
-  try { return new TextDecoder(cs || "utf-8").decode(buf); } catch (e) { return new TextDecoder("utf-8").decode(buf); }
-}
-
-const BALISE = {};
-const balise = n => BALISE[n] || (BALISE[n] = new RegExp("<" + n + "\\b[^>]*>([\\s\\S]*?)</" + n + ">", "i"));
-/* Lecture tolérante d'un flux RSS, RDF ou Atom : titre, lien, date, chapô, source (Google). */
-function lire(texte, max, brut) {
-  const out = [], re = /<(item|entry)\b[\s\S]*?<\/\1>/gi;
-  let m;
-  while ((m = re.exec(texte)) && out.length < max) {
-    const b = m[0], get = n => { const r = balise(n).exec(b); return r ? r[1] : ""; };
-    let lien = xml(get("link")).trim();
-    if (!/^https?:\/\//i.test(lien)) {
-      lien = "";
-      for (const t of b.match(/<link\b[^>]*>/gi) || []) {
-        const href = (/href=["']([^"']+)["']/i.exec(t) || [])[1], rel = (/rel=["']([^"']+)["']/i.exec(t) || [])[1];
-        if (href && (!rel || rel === "alternate")) { lien = xml(href); break; }
-      }
-    }
-    if (!lien) { const g = xml(get("feedburner:origLink") || get("guid") || get("id")).trim(); if (/^https?:\/\//i.test(g)) lien = g; }
-    const titre = coupe(sansBalises(xml(get("title"))), 400);
-    if (!titre || !lien) continue;
-    const d = Date.parse(xml(get("pubDate") || get("dc:date") || get("published") || get("updated")).trim());
-    const desc = get("description") || get("summary") || get("content:encoded") || get("content");
-    const e = {t: titre, l: lien, d: Number.isFinite(d) ? d : null, s: coupe(sansBalises(xml(desc)), 300)};
-    const src = /<source\b([^>]*)>([\s\S]*?)<\/source>/i.exec(b);
-    if (src) { e.so = sansBalises(xml(src[2])); const u = (/url=["']([^"']+)["']/i.exec(src[1]) || [])[1]; if (u) e.su = xml(u); }
-    if (brut) e.r = coupe(xml(get("description")), 6000);   // « À la une » : la grappe d'articles liés
-    out.push(e);
-  }
-  return out;
-}
-
-async function empreinte(buf) {
-  const h = new Uint8Array(await crypto.subtle.digest("SHA-1", buf));
-  return [...h].map(x => x.toString(16).padStart(2, "0")).join("");
-}
-function explique(statut, google) {
-  if (google && (statut === 503 || statut === 429)) return `Google Actualités refuse le relais pour l'instant (${statut})`;
-  return "Le média a répondu " + statut;
-}
-function heureParis(t) {
-  const p = new Intl.DateTimeFormat("en-GB", {timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23"}).formatToParts(t).find(x => x.type === "hour");
-  return p ? Number(p.value) : 12;
-}
 const json = (o, status) => new Response(JSON.stringify(o), {status: status || 200, headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
 const mediane = a => { if (!a || !a.length) return null; const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };
+const nomSource = (f, e) => f ? (f.sites && e.so ? e.so : f.n) : "";
+const texteRecherche = (f, e) => norm((e.t || "") + " " + nomSource(f, e));
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
 export class Releveur extends DurableObject {
   constructor(ctx, env) {
@@ -96,12 +49,24 @@ export class Releveur extends DurableObject {
     this.cache = new Map();                          // clés connues de chaque flux (copie en mémoire)
     this.signes = new Map();                         // dernier état envoyé de chaque flux (ok / échec)
     this.dernierEnvoi = 0;
+    this.aVerifier = [];                             // nouvelles dépêches à comparer aux sujets suivis et mots-clés
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
     ctx.blockConcurrencyWhile(async () => {
       this.sql.exec("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
       this.sql.exec("CREATE TABLE IF NOT EXISTS cles (u TEXT PRIMARY KEY, v TEXT NOT NULL)");
       this.sql.exec("CREATE TABLE IF NOT EXISTS entrees (seq INTEGER PRIMARY KEY AUTOINCREMENT, u TEXT NOT NULL, vu INTEGER NOT NULL, l TEXT NOT NULL, d TEXT NOT NULL)");
       this.sql.exec("CREATE TABLE IF NOT EXISTS abonnes (endpoint TEXT PRIMARY KEY, j TEXT NOT NULL)");
+      // index sur l'heure de réception : ménage, rattrapage et chargement ne lisent que les lignes utiles
+      this.sql.exec("CREATE INDEX IF NOT EXISTS entrees_vu ON entrees(vu)");
+      // Version 21 : texte de recherche (titre et média, sans accents) pour chercher sur 30 jours
+      const colonnes = this.sql.exec("PRAGMA table_info(entrees)").toArray().map(c => c.name);
+      if (!colonnes.includes("n")) {
+        this.sql.exec("ALTER TABLE entrees ADD COLUMN n TEXT");
+        for (const r of this.sql.exec("SELECT seq, u, d FROM entrees").toArray()) {
+          const e = JSON.parse(r.d);
+          this.sql.exec("UPDATE entrees SET n = ? WHERE seq = ?", texteRecherche(PARMI.get(r.u), e), r.seq);
+        }
+      }
       const row = this.sql.exec("SELECT v FROM meta WHERE k = 'etat'").toArray()[0];
       this.etat = row ? JSON.parse(row.v) : {epoch: crypto.randomUUID().slice(0, 8), flux: {}, purge: 0};
       if (!row) this.sauver();
@@ -132,6 +97,21 @@ export class Releveur extends DurableObject {
     }
     return out;
   }
+  // Pages d'accueil des rédactions : liens qu'elles mettent en avant en ce moment
+  pagesUne(liste) {
+    const out = {};
+    for (const f of FLUX) if (f.pa && (!liste || liste.includes(f.u))) { const s = this.etat.flux[f.u]; if (s && s.pa) out[f.u] = s.pa; }
+    return out;
+  }
+  unes() {
+    const m = new Map();
+    for (const f of FLUX) {
+      const s = this.etat.flux[f.u];
+      if (!f.pa || !s || !s.pa || s.st !== "ok") continue;
+      for (const l of s.pa) { const k = cleLien(l); if (!m.has(k)) m.set(k, new Set()); m.get(k).add(f.n); }
+    }
+    return m;
+  }
 
   /* ---------- Un passage : lit les flux arrivés à échéance ---------- */
   async alarm() {
@@ -146,26 +126,31 @@ export class Releveur extends DurableObject {
 
   async passage() {
     const now = Date.now();
+    this.etat.dernierPassage = now;
     const dus = FLUX.filter(f => (this.st(f.u).n || 0) <= now)
       .sort((a, b) => (this.st(a.u).n || 0) - (this.st(b.u).n || 0)).slice(0, MAX_PAR_PASSAGE);
-    const nouv = [], snaps = {}, lus = [];
+    const nouv = [], snaps = {}, pa = {}, lus = [];
     let i = 0;
-    const travailleur = async () => { while (i < dus.length) { const f = dus[i++]; lus.push(f.u); await this.relever(f, nouv, snaps); } };
+    const travailleur = async () => { while (i < dus.length) { const f = dus[i++]; lus.push(f.u); await this.relever(f, nouv, snaps, pa); } };
     await Promise.all(Array.from({length: SIMULTANES}, travailleur));
     let seq = 0;
     if (nouv.length) {
-      for (const [u, e] of nouv) this.sql.exec("INSERT INTO entrees (u, vu, l, d) VALUES (?, ?, ?, ?)", u, e.v, e.l, JSON.stringify(e));
+      for (const [u, e] of nouv) this.sql.exec("INSERT INTO entrees (u, vu, l, d, n) VALUES (?, ?, ?, ?, ?)", u, e.v, e.l, JSON.stringify(e), texteRecherche(PARMI.get(u), e));
       seq = this.seqMax();
       if (this.items) for (const [u, e] of nouv) this.ajouterItem(u, e);
+      for (const [u, e] of nouv) if (!e.b) { const it = versItem(PARMI.get(u), e); if (it && now - it.t < 3 * 3600e3) this.aVerifier.push(it); }
+      if (this.aVerifier.length > 500) this.aVerifier.splice(0, this.aVerifier.length - 500);
       this.aAnalyser = true;
     }
-    // Infos majeures : au plus une analyse par minute, et seulement s'il y a du nouveau
+    if (Object.keys(pa).length) this.aAnalyser = true;
+    // Infos majeures, sujets suivis, mots-clés : au plus une analyse par minute, et seulement s'il y a du nouveau
     if (this.aAnalyser && now - (this.derniereAnalyse || 0) >= 60e3) {
       this.aAnalyser = false; this.derniereAnalyse = now;
       try { await this.infosMajeures(now); } catch (e) { console.error("infos majeures", e && e.stack || String(e)); }
     }
-    if (now - (this.etat.purge || 0) > 3600e3) {        // une fois par heure : on oublie ce qui a plus de 48 h
-      this.sql.exec("DELETE FROM entrees WHERE vu < ?", now - GARDE);
+    try { await this.pointDuMatin(now); } catch (e) { console.error("point du matin", e && e.stack || String(e)); }
+    if (now - (this.etat.purge || 0) > 3600e3) {        // une fois par heure : on oublie ce qui a plus de 30 jours
+      this.sql.exec("DELETE FROM entrees WHERE vu < ?", now - MEMOIRE);
       for (const u of Object.keys(this.etat.flux)) if (!PARMI.has(u)) delete this.etat.flux[u];   // flux retirés de la liste
       this.etat.purge = now;
     }
@@ -173,17 +158,17 @@ export class Releveur extends DurableObject {
     // compte les écritures, et perdre quelques minutes d'état ne fait que relire les flux une fois de plus.
     if (now - this.sauve > 300e3) { this.sauver(); this.sauve = now; }
     if (!lus.length) return;
-    // On n'écrit aux pages ouvertes que s'il y a du nouveau (dépêches, ou un flux qui tombe ou revient),
-    // et sinon au plus toutes les 2 minutes : batterie et forfait du téléphone ménagés.
+    // On n'écrit aux pages ouvertes que s'il y a du nouveau (dépêches, pages d'accueil, ou un flux qui tombe
+    // ou revient), et sinon au plus toutes les 2 minutes : batterie et forfait du téléphone ménagés.
     const bascules = lus.filter(u => { const x = this.etat.flux[u], sig = x.st + "|" + (x.err || ""); const avant = this.signes.get(u); this.signes.set(u, sig); return avant !== sig; });
-    if (!nouv.length && !Object.keys(snaps).length && !bascules.length && now - this.dernierEnvoi < 120e3) return;
+    if (!nouv.length && !Object.keys(snaps).length && !Object.keys(pa).length && !bascules.length && now - this.dernierEnvoi < 120e3) return;
     this.dernierEnvoi = now;
-    const msg = {type: "nouv", epoch: this.etat.epoch, seq: seq || this.seqMax(), nouv, snaps, flux: this.etats(lus), passe: now};
+    const msg = {type: "nouv", epoch: this.etat.epoch, seq: seq || this.seqMax(), nouv, snaps, pa, flux: this.etats(lus), passe: now};
     const texte = JSON.stringify(msg);
     for (const ws of this.ctx.getWebSockets()) { try { ws.send(texte); } catch (e) {} }
   }
 
-  async relever(f, nouv, snaps) {
+  async relever(f, nouv, snaps, pa) {
     const s = this.st(f.u), iv = rythme(f), debut = Date.now();
     try {
       const h = {"user-agent": UA, "accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, */*;q=0.5",
@@ -203,6 +188,10 @@ export class Releveur extends DurableObject {
       if (!entrees.length && !/<(rss|feed|rdf)\b/i.test(texte)) throw new Error("réponse illisible : le site renvoie une page au lieu d'un flux");
       s.h = h1; s.cnt = entrees.length;
       const c = this.cles(f.u), vu = Date.now(), base = !s.base, mini = vu - GARDE;
+      if (f.pa) {                                      // page d'accueil : ce qu'elle met en avant (dernières 24 h)
+        const liens = entrees.filter(e => !e.d || vu - e.d < 24 * 3600e3).map(e => e.l).slice(0, 60);
+        if (JSON.stringify(liens) !== JSON.stringify(s.pa || [])) { s.pa = liens; pa[f.u] = liens; }
+      }
       let change = false;
       const liens = new Set(Object.keys(c.k).map(k => k.slice(0, k.indexOf("\n"))));
       for (const e of entrees) {
@@ -229,29 +218,38 @@ export class Releveur extends DurableObject {
     }
   }
   reussi(s, iv) {
-    s.st = "ok"; s.err = ""; s.fails = 0; s.at = Date.now();
+    s.st = "ok"; s.err = ""; s.fails = 0; s.at = s.ok = Date.now();
     s.n = s.at + Math.max(iv, s.ma || 0) * (0.9 + Math.random() * 0.2);
   }
 
-  /* ---------- Infos majeures et notifications push ---------- */
+  /* ---------- Repérage : infos majeures, sujets suivis, mots-clés ---------- */
   chargerItems() {
     if (this.items) return;
     this.items = []; this.vus = new Map();
-    for (const r of this.sql.exec("SELECT u, d FROM entrees ORDER BY seq").toArray()) this.ajouterItem(r.u, JSON.parse(r.d));
+    for (const r of this.sql.exec("SELECT u, d FROM entrees WHERE vu > ? ORDER BY seq", Date.now() - GARDE).toArray()) this.ajouterItem(r.u, JSON.parse(r.d));
   }
   ajouterItem(u, e) {
     const it = versItem(PARMI.get(u), e);
     if (!it || this.vus.has(it.ku) || this.vus.has(it.id)) return;
     this.vus.set(it.ku, it); this.vus.set(it.id, it); this.items.push(it);
   }
-  // Réglages des infos majeures (seuil, plafond, médias coupés, sujets ignorés) : ceux que la page
-  // synchronise entre tes appareils (base D1, document « prefs »), relus toutes les 10 minutes.
+  // Réglages (seuil, plafond, médias coupés, sujets ignorés, mots-clés) et sujets suivis : ceux que la page
+  // synchronise entre tes appareils (base D1), relus toutes les 10 minutes.
   async reglages() {
-    if (this.reg && Date.now() - this.reg.at < 600e3) return this.reg.p;
-    let p = {maj: true, majMin: 6, majCap: 10, muted: [], fr: false, ignSig: []};
-    try { const r = await this.env.DB.prepare("SELECT v FROM lefil_sync WHERE k = 'prefs'").first(); if (r) p = {...p, ...JSON.parse(r.v)}; } catch (e) {}
-    this.reg = {at: Date.now(), p};
-    return p;
+    if (this.reg && Date.now() - this.reg.at < 600e3) return this.reg;
+    let p = {maj: true, majMin: 6, majCap: 10, muted: [], fr: false, ignSig: [], alerts: ""}, suivis = [];
+    try {
+      const rows = (await this.env.DB.prepare("SELECT k, v FROM lefil_sync WHERE k = 'prefs' OR k LIKE 'suivi:%'").all()).results || [];
+      for (const r of rows) {
+        const d = JSON.parse(r.v);
+        if (r.k === "prefs") p = {...p, ...d};
+        else if (!d.del && d.q) suivis.push({id: d.id, name: d.name || d.q, alts: parseTerms(d.q)});
+      }
+    } catch (e) {}
+    const mots = String(p.alerts || "").split(/[,;\n]+/).map(s => s.trim()).filter(Boolean)
+      .map(k => ({k, re: new RegExp("(^|[^a-z0-9])" + escRe(norm(k)) + "(?=[^a-z0-9]|$)")}));
+    this.reg = {at: Date.now(), p, suivis: suivis.filter(s => s.alts.length), mots};
+    return this.reg;
   }
   async infosMajeures(now) {
     this.chargerItems();
@@ -260,8 +258,9 @@ export class Releveur extends DurableObject {
       this.vus = new Map(); for (const i of this.items) { this.vus.set(i.ku, i); this.vus.set(i.id, i); }
     }
     marquerLots(this.items);
-    const prefs = await this.reglages();
-    const evs = analyser(this.items, prefs, now);
+    const {p: prefs, suivis, mots} = await this.reglages();
+    const evs = analyser(this.items, prefs, now, {unes: this.unes()}).events;
+    this.dernieresMajeures = evs;
     const notif = this.etat.notifies || (this.etat.notifies = {});
     const premier = !this.etat.notifInit;             // tout premier passage : ce qui existe déjà n'est pas annoncé
     const nouveaux = [];
@@ -274,8 +273,14 @@ export class Releveur extends DurableObject {
     this.etat.notifInit = true;
     this.etat.analyse = {at: now, evenements: evs.length, depeches: this.items.length};
     for (const [k, t] of Object.entries(notif)) if (now - t > GARDE) delete notif[k];
-    if (nouveaux.length) { await this.pousser(nouveaux.slice(0, 2), now); this.sauver(); this.sauve = now; }
+    let envoye = false;
+    if (nouveaux.length) { await this.pousserMajeures(nouveaux.slice(0, 2), now); envoye = true; }
+    const aVerifier = this.aVerifier.splice(0);
+    if (!premier && aVerifier.length && (await this.pousserSuivis(aVerifier, prefs, suivis, mots, now))) envoye = true;
+    if (envoye) { this.sauver(); this.sauve = now; }
   }
+
+  /* ---------- Notifications push ---------- */
   // Clés VAPID du serveur : créées au premier besoin, gardées dans sa base (jamais ailleurs)
   async clesVapid() {
     if (this.vapid) return this.vapid;
@@ -287,25 +292,98 @@ export class Releveur extends DurableObject {
   }
   abonnes() { return this.sql.exec("SELECT endpoint, j FROM abonnes").toArray().map(r => ({endpoint: r.endpoint, ...JSON.parse(r.j)})); }
   garderAbonne(a) { const {endpoint, ...j} = a; this.sql.exec("INSERT OR REPLACE INTO abonnes (endpoint, j) VALUES (?, ?)", endpoint, JSON.stringify(j)); }
-  async pousser(evs, now) {
-    const abos = this.abonnes(); if (!abos.length) return;
+  /* Envoie un message aux appareils choisis par filtre(a) ; nuit : 23 h – 7 h, seulement si fort. */
+  async diffuser(message, now, filtre, {fort = false, compte = true} = {}) {
+    const abos = this.abonnes().filter(filtre); if (!abos.length) return 0;
     const cles = await this.clesVapid();
-    const h = heureParis(now), nuit = h >= 23 || h < 7;
+    const h = paris(now).h, nuit = h >= 23 || h < 7;
+    let n = 0;
+    for (const a of abos) {
+      if (a.nuit && nuit && !fort) continue;        // la nuit, seulement l'urgent
+      a.envois = (a.envois || []).filter(t => now - t < 864e5);
+      if (compte && a.envois.length >= 20) continue;  // garde-fou : 20 notifications par 24 h au plus
+      const st = await envoyer(a, message, cles, this.env.SITE || "https://le-fil.workers.dev").catch(() => 0);
+      if (st === 404 || st === 410) { this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", a.endpoint); continue; }
+      if (st >= 200 && st < 300) { n++; if (compte) { a.envois.push(now); this.garderAbonne(a); } }
+      else console.error("push refusé", st, new URL(a.endpoint).hostname);
+    }
+    return n;
+  }
+  journal(entree) { (this.etat.envoyes = (this.etat.envoyes || []).slice(-14)).push(entree); }
+  async pousserMajeures(evs, now) {
     for (const ev of evs) {
       const message = {titre: ev.urgent ? "Le Fil · urgent" : `Le Fil · info majeure (${ev.n} médias)`,
         texte: `${ev.rep.title}\n${ev.rep.src} · ${ev.why.join(", ")}`, lien: ev.rep.link, tag: "maj-" + ev.sig.join("-")};
-      const fort = ev.urgent || (ev.grave && ev.peak >= 6);
-      for (const a of abos) {
-        if (a.nuit && nuit && !fort) continue;      // la nuit, seulement l'urgent
-        a.envois = (a.envois || []).filter(t => now - t < 864e5);
-        if (a.envois.length >= 20) continue;          // garde-fou : 20 notifications par 24 h au plus
-        const st = await envoyer(a, message, cles, this.env.SITE || "https://le-fil.workers.dev").catch(() => 0);
-        if (st === 404 || st === 410) { this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", a.endpoint); a.parti = true; continue; }
-        if (st >= 200 && st < 300) { a.envois.push(now); this.garderAbonne(a); }
-        else console.error("push refusé", st, new URL(a.endpoint).hostname);
+      await this.diffuser(message, now, a => a.majeures !== false, {fort: ev.urgent || (ev.grave && ev.peak >= 6)});
+      this.journal({t: now, type: "majeure", titre: ev.rep.title, src: ev.rep.src, n: ev.n, lien: ev.rep.link});
+    }
+  }
+  /* Nouveaux articles des sujets suivis (au plus 1 notification toutes les 20 min par sujet) et des mots-clés
+     (au plus 1 toutes les 30 min). Même règles de mots que la page ; la presse vélo spécialisée n'y entre pas. */
+  async pousserSuivis(nouveaux, prefs, suivis, mots, now) {
+    const abos = this.abonnes(); if (!abos.some(a => a.suivis !== false || a.mots)) return false;
+    const muted = prefs.muted || [], dernier = this.etat.dernierSignal || (this.etat.dernierSignal = {});
+    const vus = new Set(), visibles = nouveaux.filter(it => !it.spe && !muted.includes(it.src) && (!prefs.fr || it.lang === "fr")
+      && !vus.has(it.ku) && vus.add(it.ku));
+    let envoye = false;
+    for (const s of suivis) {
+      const hits = visibles.filter(it => matchAlts(s.alts, it.n));
+      if (!hits.length || now - (dernier["s:" + s.id] || 0) < 20 * 60e3) continue;
+      dernier["s:" + s.id] = now;
+      const it = hits[0], autres = hits.length - 1;
+      await this.diffuser({titre: `Le Fil · suivi « ${s.name} »`, texte: `${it.title}\n${it.src}${autres ? ` (+ ${pluriel(autres, "autre")})` : ""}`,
+        lien: it.link, tag: "suivi-" + s.id}, now, a => a.suivis !== false);
+      this.journal({t: now, type: "suivi", titre: it.title, src: it.src, sujet: s.name, lien: it.link});
+      envoye = true;
+    }
+    if (mots.length && now - (dernier.mots || 0) >= 30 * 60e3) {
+      const hits = []; for (const it of visibles) { const m = mots.find(x => x.re.test(it.n)); if (m) hits.push({it, k: m.k}); }
+      if (hits.length) {
+        dernier.mots = now;
+        const {it, k} = hits[0], autres = hits.length - 1;
+        await this.diffuser({titre: `Le Fil · mot-clé « ${k} »`, texte: `${it.title}\n${it.src}${autres ? ` (+ ${pluriel(autres, "autre")} sur tes mots-clés)` : ""}`,
+          lien: it.link, tag: "mots"}, now, a => !!a.mots);
+        this.journal({t: now, type: "mot", titre: it.title, src: it.src, sujet: k, lien: it.link});
+        envoye = true;
       }
-      // journal des dernières infos majeures annoncées (montré dans la fenêtre Alertes)
-      (this.etat.envoyes = (this.etat.envoyes || []).slice(-9)).push({t: now, titre: ev.rep.title, src: ev.rep.src, n: ev.n, lien: ev.rep.link});
+    }
+    return envoye;
+  }
+  /* Point du matin à 7 h 30 (heure de Paris) : les infos majeures de la nuit, en une notification. */
+  async pointDuMatin(now) {
+    const {h, m, jour} = paris(now);
+    if (h !== 7 || m < 30 || this.etat.matin === jour) return;
+    this.etat.matin = jour;
+    if (!this.abonnes().some(a => a.matin !== false)) { this.sauver(); return; }
+    this.chargerItems(); marquerLots(this.items);
+    const {p: prefs} = await this.reglages();
+    const evs = analyser(this.items, prefs, now, {unes: this.unes()}).events
+      .filter(ev => now - ev.last < 9.5 * 3600e3 && !(prefs.muted || []).includes(ev.rep.src));
+    const texte = evs.length
+      ? evs.slice(0, 4).map(ev => "• " + ev.rep.title).join("\n") + (evs.length > 4 ? `\n+ ${pluriel(evs.length - 4, "autre")}` : "")
+      : "Nuit calme : aucune info majeure depuis hier soir.";
+    await this.diffuser({titre: evs.length ? `Le Fil · ce matin, ${pluriel(evs.length, "info majeure")}` : "Le Fil · ce matin", texte,
+      lien: (this.env.SITE || "") + "/", tag: "matin"}, now, a => a.matin !== false, {compte: false});
+    this.journal({t: now, type: "matin", titre: evs.length ? pluriel(evs.length, "info majeure") + " depuis hier soir" : "Nuit calme", src: "", lien: "/"});
+    this.sauver(); this.sauve = now;
+  }
+  /* Toutes les 10 minutes (tâche planifiée) : la relève tourne-t-elle encore ? Sinon, prévenir. */
+  async veiller(now) {
+    const dernier = Math.max(0, ...Object.values(this.etat.flux).map(s => s.ok || (s.st === "ok" ? s.at || 0 : 0)));
+    const enPanne = !dernier || now - dernier > PANNE;
+    if (enPanne && !this.etat.enPanne && now - (this.etat.alertePanne || 0) > 6 * 3600e3) {
+      this.etat.enPanne = true; this.etat.alertePanne = now;
+      const depuis = dernier ? new Date(dernier).toLocaleTimeString("fr-FR", {timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit"}) : "un moment";
+      await this.diffuser({titre: "Le Fil · relève en panne", texte: `Aucun flux lu depuis ${depuis}. Le serveur se relance tout seul ; tu seras prévenu quand ça repart.`,
+        lien: (this.env.SITE || "") + "/", tag: "panne"}, now, a => a.pannes !== false, {fort: true, compte: false});
+      this.journal({t: now, type: "panne", titre: "Relève en panne", src: "", lien: "/"});
+      this.sauver();
+    } else if (!enPanne && this.etat.enPanne) {
+      this.etat.enPanne = false;
+      await this.diffuser({titre: "Le Fil · relève repartie", texte: "Les flux sont de nouveau lus normalement.", lien: (this.env.SITE || "") + "/", tag: "panne"},
+        now, a => a.pannes !== false, {compte: false});
+      this.journal({t: now, type: "panne", titre: "Relève repartie", src: "", lien: "/"});
+      this.sauver();
     }
   }
   async gererPush(request, url) {
@@ -325,7 +403,9 @@ export class Releveur extends DurableObject {
       if (!ancien && abos.length >= 30) {           // au plus 30 appareils : on oublie le plus ancien
         const vieux = abos.sort((a, b) => a.at - b.at)[0]; this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", vieux.endpoint);
       }
+      const choix = k => q[k] === undefined ? (ancien ? ancien[k] : undefined) : !!q[k];
       this.garderAbonne({endpoint: sub.endpoint, keys: {p256dh: sub.keys.p256dh, auth: sub.keys.auth}, nuit: q.nuit !== false,
+        majeures: choix("majeures") !== false, suivis: choix("suivis") !== false, mots: !!choix("mots"), matin: choix("matin") !== false, pannes: choix("pannes") !== false,
         at: ancien ? ancien.at : Date.now(), envois: ancien ? ancien.envois || [] : []});
       return json({ok: true, appareils: Math.min(30, abos.length + (ancien ? 0 : 1))});
     }
@@ -344,23 +424,44 @@ export class Releveur extends DurableObject {
     return json({erreur: "introuvable"}, 404);
   }
 
-  /* ---------- Rattrapage : tout ce qu'une page a manqué ---------- */
+  /* ---------- Recherche sur 30 jours ---------- */
+  recherche(q, avant) {
+    const mots = norm(q).split(/[^a-z0-9]+/).filter(w => w.length >= 2).slice(0, 6);
+    if (!mots.length) return json({erreur: "mots trop courts"}, 400);
+    const lim = 80, borne = Number(avant) > 0 ? Number(avant) : Number.MAX_SAFE_INTEGER;
+    const rows = this.sql.exec(`SELECT seq, u, vu, d FROM entrees WHERE seq < ? AND ${mots.map(() => "n LIKE ?").join(" AND ")} ORDER BY seq DESC LIMIT ${lim}`,
+      borne, ...mots.map(w => "%" + w + "%")).toArray();
+    const vus = new Set(), resultats = [];
+    for (const r of rows) {
+      const f = PARMI.get(r.u); if (!f || f.une) continue;
+      const e = JSON.parse(r.d), k = cleLien(e.l);
+      if (vus.has(k)) continue;
+      vus.add(k);
+      resultats.push({t: e.t, l: e.l, src: nomSource(f, e), d: Number.isFinite(e.d) && !e.b ? e.d : (e.d || r.vu), s: e.s || ""});
+    }
+    return json({resultats, avant: rows.length ? rows[rows.length - 1].seq : 0, fin: rows.length < lim,
+      depuis: (this.sql.exec("SELECT vu FROM entrees ORDER BY seq LIMIT 1").toArray()[0] || {}).vu || null});
+  }
+
+  /* ---------- Rattrapage : ce qu'une page a manqué (48 dernières heures) ---------- */
   rattrapage(depuis, epoque) {
     const complet = epoque !== this.etat.epoch;
-    const rows = this.sql.exec("SELECT seq, u, l, d FROM entrees WHERE seq > ? ORDER BY seq", complet ? 0 : Math.max(0, Number(depuis) || 0)).toArray();
+    const rows = this.sql.exec("SELECT seq, u, l, d FROM entrees WHERE seq > ? AND vu > ? ORDER BY seq",
+      complet ? 0 : Math.max(0, Number(depuis) || 0), Date.now() - GARDE).toArray();
     const dernier = new Map();                        // une seule version par article : la plus récente
     for (const r of rows) dernier.set(r.u + "\n" + r.l, r);
     const nouv = [...dernier.values()].sort((a, b) => a.seq - b.seq).map(r => `[${JSON.stringify(r.u)},${r.d}]`);
     const snaps = {};
     for (const f of FLUX) if (f.une) { const c = this.cles(f.u); if (c.snap) snaps[f.u] = c.snap; }
-    const seq = rows.length ? rows[rows.length - 1].seq : this.seqMax();
+    const seq = Math.max(rows.length ? rows[rows.length - 1].seq : 0, this.seqMax());
     return `{"type":"fil","epoch":${JSON.stringify(this.etat.epoch)},"complet":${complet},"seq":${Math.max(seq, complet ? 0 : Number(depuis) || 0)},`
-      + `"flux":${JSON.stringify(this.etats())},"snaps":${JSON.stringify(snaps)},"nouv":[${nouv.join(",")}]}`;
+      + `"flux":${JSON.stringify(this.etats())},"snaps":${JSON.stringify(snaps)},"pa":${JSON.stringify(this.pagesUne())},"nouv":[${nouv.join(",")}]}`;
   }
 
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/push/")) return this.gererPush(request, url);
+    if (url.pathname === "/recherche") return this.recherche(url.searchParams.get("q") || "", url.searchParams.get("avant"));
     if (!actif(this.env)) return new Response("Relève en pause sur cette version", {status: 503});
     if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 1000);
     if (url.pathname === "/direct") {
@@ -374,7 +475,9 @@ export class Releveur extends DurableObject {
         headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"},
       });
     }
-    return new Response("ok");                        // /reveil : vérifie seulement que la relève tourne
+    // /reveil (tâche planifiée, toutes les 10 min) : la relève est relancée si besoin, et l'on prévient si elle est en panne
+    try { await this.veiller(Date.now()); } catch (e) { console.error("veille", e && e.stack || String(e)); }
+    return new Response("ok");
   }
   async webSocketMessage(ws, message) {
     let q; try { q = JSON.parse(message); } catch (e) { return; }
