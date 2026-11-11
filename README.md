@@ -46,6 +46,7 @@ Le délai entre la publication d'un article et son arrivée dépend surtout du m
 - `b` adresse de secours (Google Actualités) si le flux du média est bloqué ;
 - `q` plafond de dépêches par 24 h (pour les flux très bavards) ;
 - `pa` le flux suit la page d'accueil de la rédaction (sert à « À la une ») ;
+- `rf` la rubrique `r` s'applique à tous ses articles, quelle que soit leur adresse (presse régionale : rubrique « Régions ») ;
 - `g` + `sites` requête Google Actualités groupée, pour les médias sans flux à eux ;
 - `v: "velo"`, `cy`, `pays` : presse vélo de la vue Cyclisme.
 

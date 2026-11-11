@@ -88,38 +88,53 @@ function analyser(items, prefs, now, opts = {}) {
     const [b, n] = [...m.entries()].sort((x, y) => y[1] - x[1])[0];
     if (n / c >= 0.7 && isName(b)) idf.set(a, 0);        // prénom presque toujours suivi du même nom
   }
-  // Regroupement chronologique autour de noyaux.
+  // Regroupement chronologique autour de noyaux. Un index mot -> noyaux qui le contiennent évite de
+  // comparer chaque dépêche à tous les noyaux : seuls ceux qui partagent un mot avec elle peuvent lui ressembler.
   const pool = items.filter(it => it.t >= flagFrom && !it.spe).sort((a, b) => a.t - b.t);
-  const clusters = [];
+  const clusters = [], parMot = new Map();
+  const indexer = (k, w) => { let l = parMot.get(w); if (!l) parMot.set(w, l = []); l.push(k); };
   for (const it of pool) {
     const vec = []; let nn = 0;
     for (const w of it.words) { const v = idf.get(w) || 0; if (v > 0.5) { vec.push([w, v]); nn += v * v; } }
     if (!vec.length) continue;
     nn = Math.sqrt(nn);
-    let best = null, bestS = 0;
-    for (const c of clusters) {
+    let best = null, bestS = 0, bestK = -1;
+    const vus = new Set();
+    for (const [w0] of vec) for (const k of parMot.get(w0) || []) {
+      if (vus.has(k)) continue;
+      vus.add(k);
+      const c = clusters[k];
       if (it.t - c.last > 12 * 3600e3) continue;
       let dot = 0;
       for (const [w, v] of vec) { const cw = c.cen.get(w); if (cw) dot += v * cw; }
       if (!dot) continue;
       const sim = dot / (nn * c.norm);
-      if (sim > bestS) { bestS = sim; best = c; }
+      if (sim > bestS || (sim === bestS && k < bestK)) { bestS = sim; best = c; bestK = k; }   // à égalité, le plus ancien noyau
     }
     if (best && bestS >= sim) {
       best.items.push(it); best.last = it.t;
-      for (const [w, v] of vec) best.cen.set(w, (best.cen.get(w) || 0) + v / nn);
+      for (const [w, v] of vec) { if (!best.cen.has(w)) indexer(bestK, w); best.cen.set(w, (best.cen.get(w) || 0) + v / nn); }
       let s2 = 0; for (const x of best.cen.values()) s2 += x * x;
       best.norm = Math.sqrt(s2);
     } else {
+      const k = clusters.length;
       clusters.push({items: [it], cen: new Map(vec.map(([w, v]) => [w, v / nn])), norm: 1, last: it.t});
+      for (const [w] of vec) indexer(k, w);
     }
   }
   // Deuxième passe : deux événements dont les noyaux se ressemblent fortement sont le même sujet
   // vu sous deux angles (« Bardella dément » et « la campagne de Marine Le Pen percutée »).
+  // Même astuce : seuls les noyaux qui partagent un mot avec A (au fil des fusions) sont comparés.
   clusters.sort((a, b) => b.items.length - a.items.length);
+  const ou = new Map();
+  clusters.forEach((c, k) => { for (const w of c.cen.keys()) { let l = ou.get(w); if (!l) ou.set(w, l = []); l.push(k); } });
+  const cand = new Uint8Array(clusters.length);
+  const marquer = (mots, apres) => { for (const w of mots) for (const k of ou.get(w) || []) if (k > apres) cand[k] = 1; };
   for (let i = 0; i < clusters.length; i++) {
     const A = clusters[i]; if (!A || A.items.length < 2) continue;
+    cand.fill(0); marquer(A.cen.keys(), i);
     for (let j = i + 1; j < clusters.length; j++) {
+      if (!cand[j]) continue;
       const B = clusters[j]; if (!B) continue;
       let dot = 0;
       for (const [w, v] of B.cen) { const x = A.cen.get(w); if (x) dot += v * x; }
@@ -129,6 +144,7 @@ function analyser(items, prefs, now, opts = {}) {
       let s2 = 0; for (const x of A.cen.values()) s2 += x * x;
       A.norm = Math.sqrt(s2);
       clusters[j] = null;
+      marquer(B.cen.keys(), j);
     }
   }
   for (let i = clusters.length - 1; i >= 0; i--) if (!clusters[i]) clusters.splice(i, 1);
