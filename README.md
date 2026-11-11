@@ -8,6 +8,7 @@ Fil d'actualité en direct, personnel : une page web et un petit serveur héberg
 2. Chaque dépêche nouvelle est gardée 48 h et **poussée aussitôt** aux pages ouvertes (WebSocket `/direct`).
 3. Une page qui s'ouvre récupère d'abord ce qu'elle a manqué (`/fil?depuis=…`), puis reste branchée.
 4. Si le Releveur ne répond pas, la page relève elle-même les flux à travers le relais `/rss`, comme avant la version 19.
+5. **Notifications** (version 20) : après chaque arrivée de dépêches, le Releveur repère les infos majeures avec la même méthode que la page (`src/majeures.js`, réglages synchronisés : seuil, plafond, médias coupés, sujets ignorés) et prévient les appareils abonnés par Web Push (`src/webpush.js`), même Le Fil fermé. La nuit (23 h – 7 h), seulement l'urgent, si l'appareil l'a demandé. Les clés de notification sont créées par le Releveur et gardées dans sa base.
 
 Le délai entre la publication d'un article et son arrivée dépend surtout du média : son flux RSS est souvent mis à jour quelques minutes après la mise en ligne. La fenêtre Sources montre ce délai médian pour chaque média.
 
@@ -22,6 +23,8 @@ Le délai entre la publication d'un article et son arrivée dépend surtout du m
 | `public/le-fil-modele.apkg` | Modèle de cartes Anki. |
 | `src/worker.js` | Aiguillage : sert la page, relaie `/fil` et `/direct` vers le Releveur, lit un flux à la demande (`/rss`, sujets suivis et secours), l'heure des articles (`/date`), synchronise les appareils (`/sync`). |
 | `src/releveur.js` | Le Releveur : relève en continu, garde 48 h de dépêches, pousse les nouveautés. |
+| `src/majeures.js` | Repérage des infos majeures côté serveur (recopie de la méthode de la page). |
+| `src/webpush.js` | Notifications push : chiffrement (RFC 8291) et signature VAPID (RFC 8292), sans bibliothèque. |
 | `src/hotes.js` | Sites que le relais a le droit de lire. **Généré** à partir de `flux.json`, ne pas modifier à la main. |
 | `outils/construire.py` | Reporte `flux.json` dans la page et régénère `src/hotes.js`. |
 | `wrangler.jsonc` | Configuration Cloudflare (nom du Worker, base D1 de synchronisation). |
