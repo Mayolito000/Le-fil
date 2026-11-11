@@ -1,0 +1,25 @@
+// Configuration Cloudflare de Le Fil.
+//   npx wrangler deploy --env test   -> version de test (le-fil-test.<sous-domaine>.workers.dev)
+//   npx wrangler deploy              -> le vrai site (le-fil.<sous-domaine>.workers.dev)
+// Les secrets SYNC_KEY et NTFY_TOPIC se règlent à part (npx wrangler secret put SYNC_KEY) : jamais ici.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "le-fil",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-28",
+  "workers_dev": true,
+  "preview_urls": false,
+  // Les fichiers de public/ (page, service worker, icônes, modèle Anki) sont intégrés au Worker à la mise en ligne.
+  "rules": [
+    { "type": "Text", "globs": ["**/public/sw.js", "**/*.webmanifest", "**/*.html"], "fallthrough": true },
+    { "type": "Data", "globs": ["**/*.png", "**/*.apkg"], "fallthrough": true }
+  ],
+  "d1_databases": [{ "binding": "DB", "database_name": "le-fil", "database_id": "4a563326-ad2f-44f3-90f8-416f6c03ce1b" }],
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "env": {
+    "test": {
+      "d1_databases": [{ "binding": "DB", "database_name": "le-fil", "database_id": "4a563326-ad2f-44f3-90f8-416f6c03ce1b" }],
+      "observability": { "enabled": true, "head_sampling_rate": 1 }
+    }
+  }
+}

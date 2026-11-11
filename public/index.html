@@ -1,0 +1,2440 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#EDEEF0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101215" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Le Fil">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<title>Le Fil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EDEEF0;--surface:#E4E6EA;--raise:#F6F7F8;--ink:#16181C;--muted:#5B6069;--rule:#CFD3D9;
+  --accent:#2440C4;--accent-soft:#DDE1F7;--flag:#8A5A00;--flag-soft:#F0E4CB;--ok:#1E7A46;--err:#B3261E;
+  --hot:#B3261E;--hot-soft:#F5DEDA;
+  --f-display:"Archivo",Helvetica,Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#101215;--surface:#171A1F;--raise:#1D2026;--ink:#E7E9EC;--muted:#969CA6;--rule:#2A2E36;
+    --accent:#8FA2FF;--accent-soft:#1C2340;--flag:#E0B252;--flag-soft:#2E2413;--ok:#5CC28A;--err:#F2857B;--hot:#FF8A7F;--hot-soft:#3A1917;color-scheme:dark}
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.45}
+.wrap{max-width:52rem;margin:0 auto;padding-inline:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* En-tête collant */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:env(safe-area-inset-top,0px);border-bottom:2px solid var(--ink)}
+.top .wrap{display:flex;flex-direction:column;gap:.35rem;padding-block:.7rem .55rem}
+.controls{display:flex;flex-direction:column;gap:.6rem;padding-block:.8rem .2rem}
+.brand{display:flex;align-items:center;gap:.8rem}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:1.65rem;letter-spacing:-.03em;line-height:1}
+.live{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--f-mono);font-size:.66rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.live i{width:.5rem;height:.5rem;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
+.live.off{color:var(--muted)}
+.live.off i{animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.clock{margin-left:auto;font-family:var(--f-mono);font-size:1rem;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.status{font-family:var(--f-mono);font-size:.68rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:.2rem .9rem;align-items:center;font-variant-numeric:tabular-nums}
+.status b{font-weight:500;color:var(--ink)}
+.linkbtn{background:none;border:0;padding:0;font-family:var(--f-mono);font-size:.68rem;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.tools{display:flex;gap:.45rem;align-items:stretch}
+.search{flex:1;min-width:0;position:relative}
+.search input{width:100%;height:2.3rem;padding:0 .7rem;border:1px solid var(--rule);background:var(--raise);font-family:var(--f-body);font-size:1rem;border-radius:0}
+.search input::placeholder{color:var(--muted)}
+.btn{height:2.3rem;padding:0 .65rem;border:1px solid var(--rule);background:transparent;font-family:var(--f-mono);font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:.35rem}
+.btn:hover{border-color:var(--ink)}
+.btn span{color:var(--muted);font-weight:400}
+select.btn{padding-right:.4rem}
+.chips{display:flex;gap:.35rem;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--rule);background:transparent;padding:.28rem .55rem;font-family:var(--f-mono);font-size:.7rem;cursor:pointer;display:inline-flex;gap:.4rem;white-space:nowrap}
+.chip span{color:var(--muted);font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip[aria-pressed="true"] span{color:inherit;opacity:.7}
+.chip.al{border-color:var(--accent);color:var(--accent)}
+.chip.mj{border-color:var(--hot);color:var(--hot);font-weight:600}
+.chip.mj[aria-pressed="true"]{background:var(--hot);color:var(--bg);border-color:var(--hot)}
+.chip.al[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.chip.sv{border-color:var(--flag);color:var(--flag)}
+.chip.sv[aria-pressed="true"]{background:var(--flag);color:var(--bg);border-color:var(--flag)}
+.chip.sv.has span{color:inherit;font-weight:600}
+.busy{position:absolute;left:0;right:0;bottom:-2px;height:2px;overflow:hidden;pointer-events:none}
+.busy::after{content:"";position:absolute;inset:0;width:30%;background:var(--accent);transform:translateX(-100%);opacity:0}
+.busy.on::after{opacity:1;animation:sweep 1.4s linear infinite}
+@keyframes sweep{to{transform:translateX(340%)}}
+.pill{position:absolute;left:50%;bottom:-2.9rem;transform:translateX(-50%);background:var(--accent);color:var(--bg);border:0;padding:.5rem .9rem;font-family:var(--f-mono);font-size:.74rem;font-weight:600;letter-spacing:.04em;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);white-space:nowrap}
+
+/* Bandeau d'erreur relais */
+.banner{margin-top:1rem;border:1px solid var(--err);color:var(--err);padding:.7rem .85rem;font-family:var(--f-mono);font-size:.78rem;line-height:1.5}
+
+/* Le fil */
+main{padding-bottom:3rem}
+.day{margin:1.6rem 0 0;padding-bottom:.4rem;border-bottom:1px solid var(--ink);font-family:var(--f-mono);font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.d{display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:.9rem;padding-block:.8rem;border-bottom:1px solid var(--rule)}
+.d time{font-family:var(--f-mono);font-size:.84rem;font-weight:500;font-variant-numeric:tabular-nums;padding-top:.1rem;align-self:start;justify-self:start}
+.d.nw time{background:var(--flag-soft);color:var(--flag);font-weight:600;padding:.1rem .3rem;margin-left:-.3rem}
+.meta{display:flex;flex-wrap:wrap;gap:.15rem .55rem;font-family:var(--f-mono);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.meta .src{color:var(--ink);font-weight:600}
+.tg{padding:0 .3rem;border:1px solid currentColor}
+.tg.nwt{color:var(--flag)}
+.tg.alt{color:var(--accent)}
+.tg.hot{color:var(--bg);background:var(--hot);border-color:var(--hot);font-weight:600}
+.tg.hotl{color:var(--hot)}
+.tg.svt{color:var(--flag);font-weight:600}
+.tg.svn{color:var(--bg);background:var(--flag);border-color:var(--flag);font-weight:600}
+.also{margin-top:.45rem;font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+.also summary{cursor:pointer;line-height:1.5}
+.also ul,.also ol{margin:.4rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.35rem}
+.also li{font-family:var(--f-body);font-size:.9rem;color:var(--ink);line-height:1.35}
+.also li time,.also li b{font-family:var(--f-mono);font-size:.68rem;color:var(--muted);margin-right:.3rem}
+.also li b{color:var(--ink);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.also a{text-decoration:none}.also a:hover{text-decoration:underline}
+.ig{background:none;border:0;padding:0;font:inherit;text-transform:none;letter-spacing:0;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.ig:hover{color:var(--ink)}
+.d h2{margin:.2rem 0 0;font-family:var(--f-display);font-weight:600;font-size:1.03rem;line-height:1.3;letter-spacing:-.005em;text-wrap:pretty}
+.d h2 a{text-decoration:none}
+.d h2 a:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.d h2 a:visited{color:var(--muted)}
+.d p{margin:.25rem 0 0;max-width:65ch;color:var(--muted);font-size:.95rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.d.al,.d.mj{background:var(--accent-soft);margin-inline:-.6rem;padding-inline:.6rem}
+.d.mj{background:var(--hot-soft)}
+.d.lot .meta{margin-bottom:.1rem}
+.d .lbl{margin-top:.35rem;font-family:var(--f-mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.d .lbl + h2{margin-top:.1rem}
+.d .latest{margin-top:.5rem;padding-left:.7rem;border-left:2px solid var(--hot);display:flex;flex-direction:column;gap:.1rem}
+.d .latest .lbl{margin-top:0}
+.d .latest a{font-family:var(--f-body);font-size:.97rem;line-height:1.35;text-decoration:none;color:var(--ink)}
+.d .latest a:hover{color:var(--accent);text-decoration:underline}
+.d.lot .also{margin-top:.2rem}
+.d.in{animation:arrive 2.4s ease-out}
+@keyframes arrive{from{background:var(--flag-soft)}}
+.empty{padding:2.5rem 0;color:var(--muted);font-family:var(--f-mono);font-size:.8rem;line-height:1.6}
+/* Bandeau propre à une vue (Anki, Cyclisme, Suivis) */
+.viewbar{margin-top:1rem;padding:.75rem .85rem;border:1px solid var(--rule);background:var(--raise);display:flex;flex-direction:column;gap:.55rem}
+.viewbar[hidden]{display:none}
+.viewbar p{margin:0;font-size:.92rem;color:var(--muted);line-height:1.45}
+.viewbar p b{color:var(--ink);font-weight:500}
+.viewbar p a{color:var(--accent)}
+.viewbar .actions{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center}
+.viewbar .note{font-family:var(--f-mono);font-size:.68rem;color:var(--muted)}
+/* Sujets suivis */
+.dos{margin-top:1.2rem;display:flex;flex-direction:column;gap:.45rem;padding-bottom:.9rem;border-bottom:2px solid var(--ink)}
+.dos h2{margin:0;font-family:var(--f-display);font-size:1.35rem;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.dos .hint{margin:0;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);line-height:1.55}
+.dos .actions{display:flex;flex-wrap:wrap;gap:.45rem}
+.d h2 button.open{all:unset;cursor:pointer}
+.d h2 button.open:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.d h2 button.open:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.d .terms{margin-top:.35rem;font-family:var(--f-mono);font-size:.68rem;color:var(--muted);overflow-wrap:anywhere}
+.dlg input.field{width:100%;height:2.3rem;padding:0 .6rem;border:1px solid var(--rule);background:var(--raise);font-family:var(--f-body);font-size:1rem;border-radius:0}
+.dlg label.lab{font-family:var(--f-mono);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:-.6rem}
+#suivi-q{min-height:3.4rem}
+.dlg .preview{margin:0;font-family:var(--f-mono);font-size:.72rem;color:var(--muted);line-height:1.55}
+.dlg .preview li{font-family:var(--f-body);font-size:.88rem;color:var(--ink)}
+.dlg .preview ul{margin:.3rem 0 0;padding-left:1.1rem}
+.btn.danger{color:var(--err);border-color:var(--err)}
+.sync-row .field{flex:1;min-width:12rem;width:auto}
+.status .syncerr{color:var(--err)}
+.more{margin:1.5rem 0 0;width:100%}
+footer{border-top:1px solid var(--rule);padding-block:1rem 2rem;font-family:var(--f-mono);font-size:.68rem;color:var(--muted);line-height:1.6}
+
+/* Fenêtres */
+dialog{width:min(42rem,calc(100% - 24px));max-height:calc(100% - 48px);padding:0;border:1px solid var(--ink);background:var(--bg);color:var(--ink)}
+dialog::backdrop{background:rgba(10,12,16,.45)}
+.dlg{display:flex;flex-direction:column;gap:1rem;padding:1.1rem 1.1rem 1.2rem}
+.dlg header{display:flex;align-items:baseline;gap:1rem}
+.dlg h2{margin:0;font-family:var(--f-display);font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
+.dlg header .btn{margin-left:auto}
+.dlg p.hint{margin:0;color:var(--muted);font-size:.9rem}
+.dlg label.row{display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;font-family:var(--f-mono);font-size:.75rem}
+.dlg h3.sub{margin:.4rem 0 -.4rem;padding-top:.7rem;border-top:1px solid var(--rule);font-family:var(--f-mono);font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.dlg textarea{width:100%;min-height:6rem;padding:.6rem;border:1px solid var(--rule);background:var(--raise);font-family:var(--f-mono);font-size:.85rem;resize:vertical;border-radius:0}
+.dlg .actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tablebox{overflow-x:auto;border-top:1px solid var(--ink)}
+table{border-collapse:collapse;width:100%;font-family:var(--f-mono);font-size:.72rem}
+th{text-align:left;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:.45rem .5rem;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:.4rem .5rem;border-bottom:1px solid var(--rule);vertical-align:top}
+td label{font-weight:600;cursor:pointer}
+td small{display:block;color:var(--muted);font-size:.64rem}
+td.st{white-space:nowrap}
+.st.ok{color:var(--ok)}.st.err{color:var(--err)}.st.off,.st.wait{color:var(--muted)}
+tr.muted td:not(:first-child){opacity:.5}
+
+@media (max-width:40rem){
+  body{font-size:16px}
+  .brand h1{font-size:1.45rem}
+  .d{grid-template-columns:2.9rem minmax(0,1fr);gap:.6rem}
+  .d h2{font-size:.98rem}
+  .tools{flex-wrap:wrap}
+  .search{flex-basis:100%}
+  .tools .btn{flex:1;justify-content:center}
+  .status .opt{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .live i,.busy.on::after,.d.in{animation:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Le Fil</h1>
+      <span class="live" id="live"><i></i><span id="live-txt">En direct</span></span>
+      <span class="clock" id="clock" aria-label="Heure de Paris">--:--:--</span>
+    </div>
+    <div class="status" id="status">Premier relevé en cours…</div>
+  </div>
+  <div class="busy" id="busy"></div>
+  <button class="pill" id="pill" type="button" hidden></button>
+</header>
+
+<section class="controls wrap" aria-label="Filtres">
+    <div class="tools">
+      <div class="search"><input id="q" type="search" placeholder="Filtrer : Pogačar, Sénat, Ukraine…" aria-label="Filtrer les dépêches" autocomplete="off" enterkeyhint="search"></div>
+      <button class="btn" id="open-alerts" type="button" aria-haspopup="dialog"><b>Alertes</b></button>
+      <button class="btn" id="open-sources" type="button" aria-haspopup="dialog"><b>Sources</b><span id="src-count">0</span></button>
+      <select class="btn" id="hours" aria-label="Période affichée">
+        <option value="3">3 h</option><option value="6">6 h</option><option value="12">12 h</option><option value="24">24 h</option><option value="48">48 h</option>
+      </select>
+    </div>
+    <div class="chips" id="chips" role="toolbar" aria-label="Rubriques"></div>
+</section>
+
+<main class="wrap">
+  <div class="banner" id="banner" hidden></div>
+  <div class="viewbar" id="viewbar" hidden></div>
+  <div id="list" aria-live="off"></div>
+  <button class="btn more" id="more" type="button" hidden>Afficher 200 dépêches de plus</button>
+</main>
+
+<footer class="wrap" id="foot">
+  <b>Le Fil, version 18</b> (10 novembre 2026).
+  Les flux sont ceux de ta revue de presse, plus la presse vélo de la vue Cyclisme. Ils sont relevés par ton relais Cloudflare, directement depuis les sites des médias : rien ne passe par Claude.
+  Google Actualités refuse souvent le relais : les quelques médias sans flux à eux (AFP, Reuters, Les Échos…) peuvent manquer.
+  Le Fil s'installe comme une appli (menu du navigateur, « Ajouter à l'écran d'accueil ») et s'ouvre même hors connexion, avec les dernières dépêches enregistrées.
+</footer>
+
+<dialog id="dlg-alerts" aria-labelledby="alerts-title">
+  <form class="dlg" method="dialog" id="alerts-form">
+    <header><h2 id="alerts-title">Alertes</h2><button class="btn" value="cancel" type="submit">Fermer</button></header>
+    <h3 class="sub">Infos majeures · automatique</h3>
+    <label class="row"><input type="checkbox" id="maj-on"> Signaler les infos majeures, quel que soit le sujet</label>
+    <label class="row" for="maj-thr">Seuil
+      <select class="btn" id="maj-thr">
+        <option value="5">5 médias</option>
+        <option value="6">6 médias (conseillé)</option>
+        <option value="8">8 médias</option>
+      </select></label>
+    <label class="row" for="maj-cap">Au plus
+      <select class="btn" id="maj-cap">
+        <option value="6">6 infos majeures par 24 h</option>
+        <option value="10">10 infos majeures par 24 h (conseillé)</option>
+        <option value="15">15 infos majeures par 24 h</option>
+      </select></label>
+    <p class="hint">Sans IA, Le Fil regroupe les dépêches qui parlent du même événement. Il le retient s'il figure parmi les 3 premiers sujets « À la une » de Google Actualités, qui reflètent ce que l'ensemble des médias mettent en avant ; ou s'il est repris par ce nombre de médias différents en 3 h ; ou par 4 médias dont 2 emploient un mot grave (attentat, séisme, « est mort », condamnation…) ; ou s'il est titré ALERTE ou URGENT par 2 médias. Seuls les plus importants de la journée sont gardés, dans la limite choisie. Chaque info majeure indique pourquoi elle a été retenue.</p>
+    <h3 class="sub">Mes mots-clés</h3>
+    <p class="hint">Une dépêche dont le titre ou le chapô contient un de ces mots est surlignée. Sépare les mots par des virgules. Accents et majuscules ne comptent pas.</p>
+    <textarea id="alerts-kw" aria-label="Mots d'alerte" spellcheck="false"></textarea>
+    <h3 class="sub">Me prévenir</h3>
+    <label class="row"><input type="checkbox" id="alerts-sound"> Bip sonore à chaque nouvelle alerte ou info majeure</label>
+    <label class="row"><input type="checkbox" id="alerts-notif"> Notification quand l'onglet est en arrière-plan</label>
+    <p class="hint" id="notif-hint"></p>
+    <div class="actions"><button class="btn primary" type="button" id="alerts-save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-suivi" aria-labelledby="suivi-title">
+  <form class="dlg" method="dialog" id="suivi-form">
+    <header><h2 id="suivi-title">Suivre un sujet</h2><button class="btn" value="cancel" type="submit">Fermer</button></header>
+    <label class="lab" for="suivi-name">Nom du dossier</label>
+    <input class="field" id="suivi-name" type="text" autocomplete="off" maxlength="60" placeholder="Procès Dati">
+    <label class="lab" for="suivi-q">Mots à suivre</label>
+    <textarea id="suivi-q" spellcheck="false" placeholder="Dati"></textarea>
+    <p class="hint">Une dépêche entre dans le dossier si son titre ou son chapô contient tous les mots d'un groupe. Sépare les groupes par des virgules : « Bardella Mediapart, Bardella antisémites ». Accents, majuscules et pluriels ne comptent pas ; « condamn* » prend tous les mots qui commencent ainsi ; « "Le Pen" » garde l'expression entière.</p>
+    <label class="row"><input type="checkbox" id="suivi-g"> Chercher aussi dans tout Google Actualités (tous médias, 7 derniers jours), toutes les 20 min</label>
+    <div class="preview" id="suivi-preview" aria-live="polite"></div>
+    <div class="actions"><button class="btn primary" type="button" id="suivi-save">Suivre ce sujet</button><button class="btn danger" type="button" id="suivi-stop" hidden>Arrêter de suivre</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-sources" aria-labelledby="sources-title">
+  <div class="dlg">
+    <header><h2 id="sources-title">Sources</h2><button class="btn" type="button" id="sources-close">Fermer</button></header>
+    <p class="hint" id="sources-sum"></p>
+    <p class="hint">« Échec » veut dire que le relais n'a pas réussi à lire ce flux au dernier essai. Le Fil réessaie tout seul, de plus en plus espacé. Si un site bloque le relais ou supprime son flux, Le Fil passe automatiquement par Google Actualités pour ce média (« via secours Google »). Pendant un échec, ce média n'apporte pas de nouvelles dépêches.</p>
+    <label class="row"><input type="checkbox" id="opt-fr"> Médias en français uniquement</label>
+    <label class="row"><input type="checkbox" id="opt-eco"> Rythme économe (relevés trois fois moins fréquents)</label>
+    <h3 class="sub">Synchronisation entre appareils</h3>
+    <p class="hint" id="sync-state"></p>
+    <div class="actions sync-row" id="sync-off"><input class="field" id="sync-key" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Colle ta clé de synchronisation" aria-label="Clé de synchronisation"><button class="btn primary" type="button" id="sync-on">Activer</button></div>
+    <div class="actions" id="sync-live" hidden><button class="btn" type="button" id="sync-go">Synchroniser maintenant</button><button class="btn" type="button" id="sync-stop">Désactiver sur cet appareil</button></div>
+    <p class="hint">Partagé : sources coupées, mots-clés, réglages et sujets ignorés des infos majeures, « français uniquement », sujets suivis et journal des infos majeures. Propre à chaque appareil : la période affichée, le bip, les notifications, le rythme économe, et le fil lui-même.</p>
+    <h3 class="sub">Médias</h3>
+    <div class="actions"><button class="btn" type="button" id="all-on">Tout activer</button><button class="btn" type="button" id="all-off">Tout couper</button><button class="btn" type="button" id="export">Exporter pour Claude</button></div>
+    <p class="hint">« Exporter pour Claude » enregistre un fichier avec les dépêches des dernières 48 h, l'état des flux et les infos majeures retenues. Joins-le à ta conversation avec Claude pour régler la détection sur ta vraie journée.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Actif</th><th>Média</th><th>Rubrique</th><th>Relevé</th><th>État</th></tr></thead>
+      <tbody id="src-body"></tbody>
+    </table></div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- Configuration ---------- */
+const VERSION = "18";
+const FEEDS = [{"n":"Le Monde","u":"https://www.lemonde.fr/rss/en_continu.xml","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"BFMTV","u":"https://www.bfmtv.com/rss/news-24-7/","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Abfmtv.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Google Actualités · À la une","u":"https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr","r":"Général","g":true,"l":"fr","t":2,"une":true},{"n":"Le Monde","u":"https://www.lemonde.fr/rss/une.xml","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Figaro","u":"https://www.lefigaro.fr/rss/figaro_actualites.xml","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Alefigaro.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Libération","u":"https://www.liberation.fr/arc/outboundfeeds/rss-all/?outputType=xml","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Aliberation.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"franceinfo","u":"https://www.francetvinfo.fr/titres.rss","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Afrancetvinfo.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"France 24","u":"https://www.france24.com/fr/rss","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Afrance24.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"RFI","u":"https://www.rfi.fr/fr/rss","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Arfi.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Parisien","u":"https://feeds.leparisien.fr/leparisien/rss","r":"Général","g":false,"l":"fr","t":1,"b":"https://news.google.com/rss/search?q=site%3Aleparisien.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Mediapart","u":"https://www.mediapart.fr/articles/feed","r":"Général","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Amediapart.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"L'Humanité","u":"https://www.humanite.fr/feed","r":"Général","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Ahumanite.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Euronews","u":"https://fr.euronews.com/rss","r":"Général","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Afr.euronews.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"BBC News","u":"https://feeds.bbci.co.uk/news/world/rss.xml","r":"Général","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Abbc.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"The Guardian","u":"https://www.theguardian.com/world/rss","r":"Général","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Atheguardian.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Courrier International","u":"https://www.courrierinternational.com/feed/all/rss.xml","r":"Général","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Acourrierinternational.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/politique/rss_full.xml","r":"Politique","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Figaro","u":"https://www.lefigaro.fr/rss/figaro_politique.xml","r":"Politique","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alefigaro.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Opex360 / Zone Militaire","u":"https://www.opex360.com/feed/","r":"Défense","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Aopex360.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/economie/rss_full.xml","r":"Économie","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Euractiv France","u":"https://euractiv.fr/feed/","r":"UE","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Aeuractiv.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/international/rss_full.xml","r":"Conflits","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"France 24","u":"https://www.france24.com/fr/moyen-orient/rss","r":"Conflits","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Afrance24.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"The Moscow Times","u":"https://www.themoscowtimes.com/rss/news","r":"Conflits","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Athemoscowtimes.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Meduza (English)","u":"https://meduza.io/rss/en/all","r":"Conflits","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Ameduza.io/en%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"MercoPress","u":"https://en.mercopress.com/rss/","r":"Amériques","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Amercopress.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"RFI","u":"https://www.rfi.fr/fr/afrique/rss","r":"Afrique","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Arfi.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Jeune Afrique","u":"https://www.jeuneafrique.com/feed/","r":"Afrique","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Ajeuneafrique.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"AllAfrica","u":"https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf","r":"Afrique","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Aallafrica.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Daily Maverick","u":"https://www.dailymaverick.co.za/dmrss/","r":"Afrique","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Adailymaverick.co.za%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/sciences/rss_full.xml","r":"Sciences","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Next","u":"https://next.ink/feed/","r":"Sciences","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Anext.ink%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Rest of World","u":"https://restofworld.org/feed/latest/","r":"Sciences","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Arestofworld.org%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/planete/rss_full.xml","r":"Environnement","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Reporterre","u":"https://reporterre.net/spip.php?page=backend","r":"Environnement","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Areporterre.net%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Carbon Brief","u":"https://www.carbonbrief.org/feed/","r":"Environnement","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Acarbonbrief.org%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/societe/rss_full.xml","r":"Société","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"The New Humanitarian","u":"https://www.thenewhumanitarian.org/rss/all.xml","r":"Société","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Athenewhumanitarian.org%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Bellingcat","u":"https://www.bellingcat.com/feed/","r":"Médias","g":false,"l":"en","t":2,"b":"https://news.google.com/rss/search?q=site%3Abellingcat.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Le Monde","u":"https://www.lemonde.fr/culture/rss_full.xml","r":"Culture","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Alemonde.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"The Conversation France","u":"https://theconversation.com/fr/articles.atom","r":"Enquêtes","g":false,"l":"fr","t":2,"b":"https://news.google.com/rss/search?q=site%3Atheconversation.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Ouest-France","u":"https://www.ouest-france.fr/rss/une","r":"Général","g":false,"l":"fr","t":3,"b":"https://news.google.com/rss/search?q=site%3Aouest-france.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr","q":60},{"n":"Sud Ouest","u":"https://www.sudouest.fr/rss.xml","r":"Général","g":false,"l":"fr","t":4,"b":"https://news.google.com/rss/search?q=site%3Asudouest.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr","q":40},{"n":"La Croix","u":"https://www.la-croix.com/feeds/rss/site.xml","r":"Général","g":false,"l":"fr","t":3,"b":"https://news.google.com/rss/search?q=site%3Ala-croix.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"L'Opinion","u":"https://www.lopinion.fr/index.rss","r":"Politique","g":false,"l":"fr","t":3,"b":"https://news.google.com/rss/search?q=site%3Alopinion.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Presse française (via Google)","u":"https://news.google.com/rss/search?q=%28site%3Aafp.com%20OR%20site%3Alesechos.fr%20OR%20site%3Alavoixdunord.fr%20OR%20site%3Acontexte.com%20OR%20site%3Alarevuedesmedias.ina.fr%29%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr","r":"Général","g":true,"l":"fr","t":4,"sites":{"afp.com":{"n":"AFP","r":"Général","l":"fr"},"lesechos.fr":{"n":"Les Échos","r":"Économie","l":"fr"},"lavoixdunord.fr":{"n":"La Voix du Nord","r":"Général","l":"fr"},"contexte.com":{"n":"Contexte","r":"UE","l":"fr"},"larevuedesmedias.ina.fr":{"n":"La Revue des médias (INA)","r":"Médias","l":"fr"}}},{"n":"La Tribune","u":"https://www.latribune.fr/feed.xml","r":"Économie","g":false,"l":"fr","t":3,"b":"https://news.google.com/rss/search?q=site%3Alatribune.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Alternatives Économiques","u":"https://www.alternatives-economiques.fr/rss.xml","r":"Économie","g":false,"l":"fr","t":4,"b":"https://news.google.com/rss/search?q=site%3Aalternatives-economiques.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"La France Agricole","u":"https://www.lafranceagricole.fr/rss","r":"Agriculture","g":false,"l":"fr","t":4,"b":"https://news.google.com/rss/search?q=site%3Alafranceagricole.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Télérama","u":"https://www.telerama.fr/rss/une.xml","r":"Culture","g":false,"l":"fr","t":4,"b":"https://news.google.com/rss/search?q=site%3Atelerama.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Café pédagogique","u":"https://www.cafepedagogique.net/feed/","r":"Éducation","g":false,"l":"fr","t":4,"b":"https://news.google.com/rss/search?q=site%3Acafepedagogique.net%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"L'Équipe","u":"https://dwh.lequipe.fr/api/edito/rss?path=/","r":"Sport","g":false,"l":"fr","t":3,"b":"https://news.google.com/rss/search?q=site%3Alequipe.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr","q":40},{"n":"New York Times","u":"https://rss.nytimes.com/services/xml/rss/nyt/World.xml","r":"International","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Anytimes.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"Financial Times","u":"https://www.ft.com/world?format=rss","r":"Économie","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Aft.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"Kyiv Independent","u":"https://kyivindependent.com/news-archive/rss/","r":"Conflits","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Akyivindependent.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"Der Spiegel International","u":"https://www.spiegel.de/international/index.rss","r":"Europe","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Aspiegel.de%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"OCCRP","u":"https://www.occrp.org/en/feed","r":"Enquêtes","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Aoccrp.org%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"International (via Google)","u":"https://news.google.com/rss/search?q=%28site%3Areuters.com%20OR%20site%3Aapnews.com%20OR%20site%3Anhk.or.jp%20OR%20site%3Afocustaiwan.tw%20OR%20site%3Athewire.in%29%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr","r":"Général","g":true,"l":"fr","t":4,"sites":{"reuters.com":{"n":"Reuters","r":"International","l":"en"},"apnews.com":{"n":"Associated Press","r":"Amériques","l":"en"},"nhk.or.jp":{"n":"NHK World","r":"Asie","l":"en"},"focustaiwan.tw":{"n":"CNA / Focus Taiwan","r":"Asie","l":"en"},"thewire.in":{"n":"The Wire (Inde)","r":"Asie","l":"en"}}},{"n":"South China Morning Post","u":"https://www.scmp.com/rss/4/feed","r":"Asie","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Ascmp.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"The Hindu","u":"https://www.thehindu.com/news/national/feeder/default.rss","r":"Asie","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Athehindu.com%20when%3A1d&hl=en&gl=US&ceid=US:en","q":25},{"n":"Channel NewsAsia","u":"https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511","r":"Asie","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Achannelnewsasia.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"Scroll.in","u":"https://feeds.feedburner.com/ScrollinArticles.rss","r":"Asie","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Ascroll.in%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"The Continent","u":"https://continent.substack.com/feed","r":"Afrique","g":false,"l":"en","t":4,"b":"https://news.google.com/rss/search?q=site%3Acontinent.substack.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"El País","u":"https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/internacional/portada","r":"Europe","g":false,"l":"es","t":4,"b":"https://news.google.com/rss/search?q=site%3Aelpais.com%20when%3A1d&hl=es&gl=ES&ceid=ES:es"},{"n":"BBC Mundo","u":"https://feeds.bbci.co.uk/mundo/rss.xml","r":"Amériques","g":false,"l":"es","t":4,"b":"https://news.google.com/rss/search?q=site%3Abbc.com%2Fmundo%20when%3A1d&hl=es&gl=ES&ceid=ES:es"},{"n":"L'Équipe Cyclisme","u":"https://dwh.lequipe.fr/api/edito/rss?path=/Cyclisme/","r":"Sport","g":false,"l":"fr","t":3,"b":"https://news.google.com/rss/search?q=site%3Alequipe.fr%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr","cy":true},{"n":"Cyclism'Actu","u":"https://www.cyclismactu.net/rss_cyclismactu.xml","r":"Sport","g":false,"l":"fr","t":2,"cy":true,"b":"https://news.google.com/rss/search?q=site%3Acyclismactu.net%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Cyclingnews","u":"https://www.cyclingnews.com/feeds/all","r":"Cyclisme","g":false,"l":"en","t":3,"v":"velo","pays":"GB","b":"https://news.google.com/rss/search?q=site%3Acyclingnews.com%20when%3A1d&hl=en&gl=GB&ceid=GB:en"},{"n":"Cycling Weekly","u":"https://www.cyclingweekly.com/feeds.xml","r":"Cyclisme","g":false,"l":"en","t":3,"v":"velo","pays":"GB","b":"https://news.google.com/rss/search?q=site%3Acyclingweekly.com%20when%3A1d&hl=en&gl=GB&ceid=GB:en"},{"n":"Escape Collective","u":"https://escapecollective.com/feed/","r":"Cyclisme","g":false,"l":"en","t":3,"v":"velo","pays":"US","b":"https://news.google.com/rss/search?q=site%3Aescapecollective.com%20when%3A1d&hl=en&gl=US&ceid=US:en"},{"n":"Sporza Wielrennen","u":"https://sporza.be/nl/categorie/wielrennen.rss.xml","r":"Cyclisme","g":false,"l":"nl","t":3,"v":"velo","pays":"BE","b":"https://news.google.com/rss/search?q=site%3Asporza.be%20wielrennen%20when%3A1d&hl=nl&gl=BE&ceid=BE:nl"},{"n":"DH Cyclisme","u":"https://www.dhnet.be/arc/outboundfeeds/rss/section/sports/cyclisme/?outputType=xml","r":"Cyclisme","g":false,"l":"fr","t":3,"v":"velo","pays":"BE","b":"https://news.google.com/rss/search?q=site%3Adhnet.be%20cyclisme%20when%3A1d&hl=fr&gl=BE&ceid=BE:fr"},{"n":"RTBF Cyclisme","u":"https://rss.rtbf.be/article/rss/highlight_rtbf_sport-cyclisme.xml?source=internal","r":"Cyclisme","g":false,"l":"fr","t":3,"v":"velo","pays":"BE","b":"https://news.google.com/rss/search?q=site%3Artbf.be%20cyclisme%20when%3A1d&hl=fr&gl=BE&ceid=BE:fr"},{"n":"WielerFlits","u":"https://www.wielerflits.nl/feed/","r":"Cyclisme","g":false,"l":"nl","t":3,"v":"velo","pays":"NL","b":"https://news.google.com/rss/search?q=site%3Awielerflits.nl%20when%3A1d&hl=nl&gl=NL&ceid=NL:nl"},{"n":"Wielerrevue","u":"https://www.wielerrevue.nl/feed/","r":"Cyclisme","g":false,"l":"nl","t":3,"v":"velo","pays":"NL","b":"https://news.google.com/rss/search?q=site%3Awielerrevue.nl%20when%3A1d&hl=nl&gl=NL&ceid=NL:nl"},{"n":"Tuttobiciweb","u":"https://www.tuttobiciweb.it/rss.php","r":"Cyclisme","g":false,"l":"it","t":3,"v":"velo","pays":"IT","b":"https://news.google.com/rss/search?q=site%3Atuttobiciweb.it%20when%3A1d&hl=it&gl=IT&ceid=IT:it"},{"n":"Cicloweb","u":"https://www.cicloweb.it/feed/","r":"Cyclisme","g":false,"l":"it","t":3,"v":"velo","pays":"IT","b":"https://news.google.com/rss/search?q=site%3Acicloweb.it%20when%3A1d&hl=it&gl=IT&ceid=IT:it"},{"n":"DirectVelo","u":"https://feeds.feedburner.com/ActualitsDirectvelo","r":"Cyclisme","g":false,"l":"fr","t":3,"v":"velo","pays":"FR","b":"https://news.google.com/rss/search?q=site%3Adirectvelo.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"Vélo 101","u":"https://www.velo101.com/feed/","r":"Cyclisme","g":false,"l":"fr","t":3,"v":"velo","pays":"FR","b":"https://news.google.com/rss/search?q=site%3Avelo101.com%20when%3A1d&hl=fr&gl=FR&ceid=FR:fr"},{"n":"La Gazzetta dello Sport","u":"https://www.gazzetta.it/dynamic-feed/rss/section/Ciclismo.xml","r":"Cyclisme","g":false,"l":"it","t":4,"b":"https://news.google.com/rss/search?q=site%3Agazzetta.it%20when%3A1d&hl=it&gl=IT&ceid=IT:it","v":"velo","pays":"IT"},{"n":"HLN","u":"https://www.hln.be/sport/wielrennen/rss.xml","r":"Cyclisme","g":false,"l":"nl","t":4,"b":"https://news.google.com/rss/search?q=site%3Ahln.be%20when%3A1d&hl=nl&gl=BE&ceid=BE:nl","v":"velo","pays":"BE"},{"n":"Het Nieuwsblad vélo (via Google)","u":"https://news.google.com/rss/search?q=site%3Anieuwsblad.be%20wielrennen%20when%3A1d&hl=nl&gl=BE&ceid=BE:nl","r":"Cyclisme","g":true,"l":"nl","t":4,"sites":{"nieuwsblad.be":{"n":"Het Nieuwsblad","r":"Cyclisme","l":"nl"}},"v":"velo","pays":"BE"}];
+/* Cyclisme : la presse vélo spécialisée (v = "velo") n'apparaît que dans la vue Cyclisme et ne compte
+   pas dans les infos majeures (dix sites de vélo sur un transfert feraient sinon une « info majeure »).
+   Les médias généralistes y apparaissent aussi, pour leurs seuls articles de cyclisme. */
+const SPE_SRC = new Set(), CY_SRC = new Set(), SRC_PAYS = new Map();
+for (const f of FEEDS) {
+  const names = f.sites ? Object.values(f.sites).map(m => m.n) : [f.n];
+  if (f.v === "velo") names.forEach(n => { SPE_SRC.add(n); if (f.pays && f.pays !== "FR") SRC_PAYS.set(n, f.pays === "GB" ? "UK" : f.pays); });
+  if (f.cy) names.forEach(n => CY_SRC.add(n));
+}
+const CYCLO_STRONG = /\b(cyclisme|cyclo-?cross|tour de france|giro|vuelta|tour d.espagne|tour d.italie|paris-roubaix|tour des flandres|milan-san remo|liege-bastogne-liege|tour de lombardie|paris-nice|criterium du dauphine|uci|maillot jaune|maillot rose|pogacar|vingegaard|evenepoel|van der poel|van aert|seixas|alaphilippe|niewiadoma|ferrand-prevot)\b/;
+const CYCLO_WEAK = /\b(cyclistes?|velos?|peloton|contre-la-montre|gravel|vtt|bmx|echappee)\b/;   // seulement en rubrique Sport
+const cycloOf = it => !!(it.spe || CY_SRC.has(it.src) || /\/(cyclisme|cycling|velo)[\/-]/i.test(it.link)
+  || CYCLO_STRONG.test(it.nt) || (it.rub === "Sport" && CYCLO_WEAK.test(it.nt)));
+const RELAIS = "/rss?url=";
+const PARIS = "Europe/Paris";
+const params = new URLSearchParams(location.search);
+const CADENCE = Math.max(2, Number(params.get("cadence")) || 0) * (params.has("cadence") ? 1 : 0); // réservé aux tests (secondes)
+const TIER_MS = {1: 60e3, 2: 180e3, 3: 300e3, 4: 600e3};       // 1, 3, 5 et 10 min
+const TIER_LABEL = {1: "1 min", 2: "3 min", 3: "5 min", 4: "10 min"};
+const MAX_AGE_H = 48;
+const FRESH_WINDOW = 3 * 3600e3;   // une entrée découverte en cours de route n'est « nouvelle » que si elle date de moins de 3 h
+const FRESH_MARK = 15 * 60e3;      // durée d'affichage de l'étiquette « Nouveau »
+const CONCURRENCY = 6;
+const PAGE = 200;
+const RUBS = ["Général","Politique","Justice","Défense","Économie","UE","Europe","International","Conflits","Amériques","Asie","Afrique","Sciences","Environnement","Agriculture","Santé","Éducation","Société","Transports","Île-de-France","Médias","Culture","Sport","Enquêtes"];
+const DEFAULT_ALERTS = "cyclisme, vélo, Tour de France, Pogačar, Seixas, Vingegaard";
+
+/* Rubrique déduite de l'adresse de l'article (segments du chemin). */
+const SEG = {
+  politique:"Politique",elections:"Politique",election:"Politique",presidentielle:"Politique",senatoriales:"Politique",legislatives:"Politique",municipales:"Politique",gouvernement:"Politique",
+  "faits-divers":"Justice",justice:"Justice","police-justice":"Justice",police:"Justice",
+  defense:"Défense",armees:"Défense",armee:"Défense",
+  economie:"Économie",conjoncture:"Économie",entreprises:"Économie",entreprise:"Économie",finances:"Économie","finances-publiques":"Économie",emploi:"Économie",impots:"Économie",immobilier:"Économie",consommation:"Économie",argent:"Économie",business:"Économie",markets:"Économie",social:"Économie",retraites:"Économie",
+  "union-europeenne":"UE",europe:"Europe",
+  international:"International",monde:"International",world:"International",
+  "moyen-orient":"Conflits","proche-orient":"Conflits",ukraine:"Conflits","guerre-en-ukraine":"Conflits",
+  ameriques:"Amériques",americas:"Amériques","etats-unis":"Amériques","amerique-latine":"Amériques",us:"Amériques",
+  asie:"Asie","asie-pacifique":"Asie",asia:"Asie","asia-pacific":"Asie",chine:"Asie",china:"Asie",
+  afrique:"Afrique",africa:"Afrique",maghreb:"Afrique",
+  sciences:"Sciences",science:"Sciences",pixels:"Sciences",technologies:"Sciences",technology:"Sciences",tech:"Sciences","high-tech":"Sciences",internet:"Sciences",espace:"Sciences",
+  planete:"Environnement",environnement:"Environnement",climat:"Environnement",climate:"Environnement",environment:"Environnement",meteo:"Environnement",
+  agriculture:"Agriculture",sante:"Santé",health:"Santé",
+  education:"Éducation",campus:"Éducation",enseignement:"Éducation",
+  societe:"Société",religion:"Société",religions:"Société",immigration:"Société",
+  transports:"Transports",transport:"Transports",
+  paris:"Île-de-France","ile-de-france":"Île-de-France",
+  medias:"Médias",media:"Médias","actu-medias":"Médias",
+  culture:"Culture",cultures:"Culture","culture-loisirs":"Culture",cinema:"Culture",musique:"Culture",livres:"Culture",arts:"Culture",
+  sport:"Sport",sports:"Sport",cyclisme:"Sport",football:"Sport",rugby:"Sport",tennis:"Sport"
+};
+
+/* ---------- Outils ---------- */
+const $ = s => document.querySelector(s);
+const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/œ/g, "oe").replace(/æ/g, "ae");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const fmtHM = new Intl.DateTimeFormat("fr-FR", {timeZone: PARIS, hour: "2-digit", minute: "2-digit"});
+const fmtHMS = new Intl.DateTimeFormat("fr-FR", {timeZone: PARIS, hour: "2-digit", minute: "2-digit", second: "2-digit"});
+const fmtDay = new Intl.DateTimeFormat("fr-CA", {timeZone: PARIS, year: "numeric", month: "2-digit", day: "2-digit"});
+const fmtDayLong = new Intl.DateTimeFormat("fr-FR", {timeZone: PARIS, weekday: "long", day: "numeric", month: "long"});
+const fmtFull = new Intl.DateTimeFormat("fr-FR", {timeZone: PARIS, weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"});
+const fmtDM = new Intl.DateTimeFormat("fr-FR", {timeZone: PARIS, day: "2-digit", month: "2-digit"});
+const hm = t => fmtHM.format(t);
+const htmlParser = new DOMParser();
+const stripHtml = s => {
+  if (!s) return "";
+  if (/[<&]/.test(s)) s = htmlParser.parseFromString(s, "text/html").body.textContent || "";
+  return s.replace(/\s+/g, " ").trim();
+};
+const clip = (s, n) => s.length <= n ? s : s.slice(0, s.lastIndexOf(" ", n) > n * .6 ? s.lastIndexOf(" ", n) : n) + "…";
+const tkey = s => norm(s).replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
+
+/* ---------- Préférences (propres à cet appareil) ---------- */
+const PREF_KEY = "lefil.v1";
+const prefs = {muted: [], alerts: DEFAULT_ALERTS, sound: false, notif: false, fr: false, eco: false, hours: 24,
+  maj: true, majMin: 6, majCap: 10, ignSig: []};
+try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY) || "{}")); } catch (e) {}
+/* Réglages partagés entre appareils quand la synchronisation est active. La période affichée, le bip,
+   les notifications et le rythme économe restent propres à chaque appareil. */
+const SHARED_PREFS = ["muted", "alerts", "maj", "majMin", "majCap", "fr"];
+const sharedSig = () => JSON.stringify(SHARED_PREFS.map(f => prefs[f]));
+let lastPrefSig = sharedSig();
+const savePrefs = () => {
+  const sig = sharedSig();
+  if (sig !== lastPrefSig) { prefs.u = Date.now(); lastPrefSig = sig; }   // date de la dernière modification partagée
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {}
+  syncSoon();
+};
+/* Synchronisation : clé reçue par le lien personnel (?cle=…), gardée sur l'appareil puis retirée de l'adresse. */
+const SYNC_LS = "lefil.sync";
+const syncSt = {cle: "", since: 0, revs: {}, hash: {}, st: "wait", err: "", at: 0, busy: false, again: false, timer: null, last: 0};
+try { const s = JSON.parse(localStorage.getItem(SYNC_LS) || "null"); if (s && s.cle) Object.assign(syncSt, {cle: s.cle, since: s.since || 0, revs: s.revs || {}, hash: s.hash || {}}); } catch (e) {}
+{
+  const cle = (params.get("cle") || "").trim();
+  if (cle) {
+    if (cle !== syncSt.cle) { Object.assign(syncSt, {cle, since: 0, revs: {}, hash: {}}); prefs.u = 0; }  // à l'activation, les réglages déjà partagés l'emportent
+    params.delete("cle");
+    try { history.replaceState(null, "", location.pathname + (params.toString() ? "?" + params : "") + location.hash); } catch (e) {}
+    try { localStorage.setItem(SYNC_LS, JSON.stringify({cle, since: 0, revs: {}, hash: {}})); localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
+}
+const isMutedName = n => prefs.muted.includes(n);
+
+/* ---------- État ---------- */
+const feeds = FEEDS.map((f, i) => ({...f, i, st: "wait", at: 0, next: 0, cnt: 0, err: "", base: false, fails: 0, hard: 0, useFb: false, busy: false}));
+const items = [];
+const byKey = new Map();
+const ui = {q: [], rub: "Tout", limit: PAGE, held: 0, unseen: 0, lastPoll: 0, renderQueued: false, lastRender: 0,
+  suivi: null, seenRef: 0, viewKey: ""};
+let inflight = 0;
+let alertRes = [];
+
+/* ---------- Alertes ---------- */
+function compileAlerts() {
+  alertRes = prefs.alerts.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean)
+    .map(k => ({k, re: new RegExp("(^|[^a-z0-9])" + escRe(norm(k)) + "(?=[^a-z0-9]|$)")}));
+  for (const it of items) it.al = alertOf(it.n);
+}
+const alertOf = n => { for (const a of alertRes) if (a.re.test(n)) return a.k; return null; };
+
+/* ---------- Infos majeures : détection sans IA ----------
+   1. Regroupement : les dépêches des dernières 24 h sont rangées en événements selon la
+      ressemblance de leurs titres (mots en commun, pondérés par leur rareté sur 48 h).
+      Chaque dépêche rejoint l'événement dont elle est le plus proche, ou en ouvre un
+      nouveau. Pas de chaînage : un récapitulatif qui cite deux sujets ne les fusionne pas,
+      et deux histoires qui partagent « plainte pour diffamation » restent distinctes.
+   2. Sélection : un événement est majeur s'il figure dans les 3 premiers sujets « À la une »
+      de Google Actualités ; ou s'il est repris par N médias différents en 3 h ; ou par
+      4 médias dont 2 emploient un mot grave ; ou s'il est titré ALERTE/URGENT par 2 médias ;
+      ou s'il est « À la une » (10 premiers) et repris par 3 médias en 3 h.
+   3. Classement : ampleur de la reprise, gravité, rang « À la une ». Au plus prefs.majCap
+      événements sur 24 h. */
+const HOT_WINDOW = 3 * 3600e3, BASE_WINDOW = 24 * 3600e3;
+const SIM = Number(params.get("sim")) || 0.28;   // ressemblance minimale pour rejoindre un événement
+const MERGE = Number(params.get("merge")) || 0.4; // ressemblance minimale pour fusionner deux événements
+const STOP = new Set(("les des une uns du de la le et en au aux pour par sur dans avec sans sous vers chez plus moins tres tout tous toute toutes son ses sa leur leurs nos notre vos votre mon mes ton tes cet cette ces qui que quoi dont mais donc car pas ete etre avoir avait fait faire font peut doit selon apres avant depuis pendant contre entre ainsi alors aussi encore deja jamais toujours comment pourquoi quand quel quelle quels quelles direct video photo info exclusif live replay podcast chronique edito tribune analyse entretien interview recit temoignage reportage carte graphique quiz annee jour semaine mois heure lundi mardi mercredi jeudi vendredi samedi dimanche janvier fevrier mars avril juin juillet aout septembre octobre novembre decembre franceinfo figaro parisien liberation euronews france24 the and for with from that this what how why into over after will say said about more than have has are was were their been his her they you our your not but can who when where which would could should one two three premier premiere deux trois nouveau nouvelle grand grande gros fin debut hier aujourd demain soir matin veut face fois cela ceci elle ils elles nous etait sera seront selon voici voila faut ancien ancienne dont suivez suivre")
+  .split(" "));
+const GRAVE = /\b(attentats?|attaques? terroristes?|terroris\w*|fusillades?|tueries?|explosions?|prises? d.otages?|seismes?|tremblements? de terre|tsunamis?|eruptions?|ouragans?|cyclones?|typhons?|crash|catastrophe aerienne|deraill\w*|effondrements?|assassin\w*|coup d.etat|etat d.urgence|vigilance rouge|alerte rouge|plan blanc|demission\w*|dissolution|censure adoptee|gouvernement renverse|est morte?|est decedee?|deces|mort de|meurt|s.est eteinte?|necrologie|cessez-le-feu|invasion|attaque nucleaire|pandemie|epidemie|emeutes?|inondations?|disparition de|condamn\w*|requi\w*|prison|emprisonnement|ineligib\w*|relaxe\w*|mise? en examen|garde a vue|perquisition\w*|verdict|coupable|ecroue\w*|inculpe\w*|limoge\w*|remaniement|antisemit\w*|agressions? sexuelles?|viols?|corruption|detournements? de fonds|emplois? fictifs?|financement illegal|enquete ouverte|ouvre une enquete|ouverture d.une enquete)\b/;
+// Titres d'attente (« réquisitions attendues », « suivez… ») : le mot grave n'y décrit pas un fait accompli.
+const ANTICIP = /\b(attendue?s?|avant les?|avant la|suivez|a quoi s.attendre|ce qu.il faut savoir|pourrai(t|ent)|risque(nt)?)\b/;
+const URGENT_STRICT = s => /^\s*(ALERTE|URGENT|FLASH|BREAKING)\b/.test(s) || /^\s*(alerte info|flash info|breaking news)\b/i.test(s);
+const notified = new Set();       // dépêches déjà annoncées par une notification
+let booted = false;
+
+function wordsOf(title) {
+  const out = [];
+  for (let w of norm(title).replace(/[^a-z0-9]+/g, " ").split(" ")) {
+    if (w.length < 4 || STOP.has(w) || /^\d+$/.test(w)) continue;
+    if (w.length > 5) w = w.slice(0, 5);                  // requis, requiert, réquisitions -> « requi »
+    if (!out.includes(w)) out.push(w);
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+/* Mots écrits avec une majuscule en milieu de titre (noms propres), hors début de phrase. */
+function capsOf(title) {
+  const caps = new Set();
+  const toks = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’']/g, " ").split(/\s+/);
+  for (let i = 1; i < toks.length; i++) {
+    if (/[:.!?«"“(]$/.test(toks[i - 1])) continue;
+    const w = toks[i].replace(/^[^A-Za-z0-9]+/, "");
+    if (!/^[A-Z]/.test(w)) continue;
+    let k = w.toLowerCase().replace(/[^a-z0-9].*$/, "");
+    if (k.length < 4 || STOP.has(k)) continue;
+    caps.add(k.length > 5 ? k.slice(0, 5) : k);
+  }
+  return caps;
+}
+let events = [];
+let lastIdf = new Map();          // rareté des mots au dernier passage (sert à proposer les mots d'un suivi)
+const UNE_TOP = 3;
+const uneRank = (it, now) => it.une && now - it.une.at < BASE_WINDOW ? it.une.r : Infinity;
+const ignoredSig = sig => (prefs.ignSig || []).some(s => Date.now() - s.at < 7 * 864e5 && s.w.filter(w => sig.includes(w)).length >= 2);
+
+function analyze() {
+  const now = Date.now();
+  for (const it of items) it.maj = null;
+  if (!prefs.maj) { events = []; return []; }
+  const minT = now - MAX_AGE_H * 3600e3, flagFrom = now - BASE_WINDOW;
+  // Rareté des mots sur 48 h : « Bardella » ou « Mediapart » pèsent plus que « plainte » ou « France ».
+  // La presse vélo spécialisée reste en dehors : elle a sa propre vue.
+  const df = new Map(); let N = 0;
+  for (const it of items) { if (it.t < minT || it.spe) continue; N++; for (const w of it.words) df.set(w, (df.get(w) || 0) + 1); }
+  const idf = new Map();
+  for (const [w, c] of df) idf.set(w, Math.log((N + 1) / (c + 1)));
+  lastIdf = idf;
+  // Prénoms et mots « collés » : un mot presque toujours suivi du même autre (« Emmanuel » -> « Macron »)
+  // n'apporte rien de plus et doublerait le poids d'un nom. On ne garde que le second.
+  const follow = new Map(), capN = new Map();
+  for (const it of items) {
+    if (it.t < minT || it.spe) continue;
+    for (const w of it.caps) capN.set(w, (capN.get(w) || 0) + 1);
+    for (let i = 0; i + 1 < it.words.length; i++) {
+      const a = it.words[i], b = it.words[i + 1];
+      let m = follow.get(a); if (!m) follow.set(a, m = new Map());
+      m.set(b, (m.get(b) || 0) + 1);
+    }
+  }
+  const isName = w => (capN.get(w) || 0) >= 0.6 * (df.get(w) || 1);
+  for (const [a, m] of follow) {
+    const c = df.get(a) || 0;
+    if (c < 3 || !isName(a)) continue;
+    const [b, n] = [...m.entries()].sort((x, y) => y[1] - x[1])[0];
+    if (n / c >= 0.7 && isName(b)) idf.set(a, 0);        // prénom presque toujours suivi du même nom
+  }
+  // Regroupement chronologique autour de noyaux.
+  const pool = items.filter(it => it.t >= flagFrom && !it.spe).sort((a, b) => a.t - b.t);
+  const clusters = [];
+  for (const it of pool) {
+    const vec = []; let nn = 0;
+    for (const w of it.words) { const v = idf.get(w) || 0; if (v > 0.5) { vec.push([w, v]); nn += v * v; } }
+    if (!vec.length) continue;
+    nn = Math.sqrt(nn);
+    let best = null, bestS = 0;
+    for (const c of clusters) {
+      if (it.t - c.last > 12 * 3600e3) continue;
+      let dot = 0;
+      for (const [w, v] of vec) { const cw = c.cen.get(w); if (cw) dot += v * cw; }
+      if (!dot) continue;
+      const sim = dot / (nn * c.norm);
+      if (sim > bestS) { bestS = sim; best = c; }
+    }
+    if (best && bestS >= SIM) {
+      best.items.push(it); best.last = it.t;
+      for (const [w, v] of vec) best.cen.set(w, (best.cen.get(w) || 0) + v / nn);
+      let s2 = 0; for (const x of best.cen.values()) s2 += x * x;
+      best.norm = Math.sqrt(s2);
+    } else {
+      clusters.push({items: [it], cen: new Map(vec.map(([w, v]) => [w, v / nn])), norm: 1, last: it.t});
+    }
+  }
+  // Deuxième passe : deux événements dont les noyaux se ressemblent fortement sont le même sujet
+  // vu sous deux angles (« Bardella dément » et « la campagne de Marine Le Pen percutée »).
+  clusters.sort((a, b) => b.items.length - a.items.length);
+  for (let i = 0; i < clusters.length; i++) {
+    const A = clusters[i]; if (!A || A.items.length < 2) continue;
+    for (let j = i + 1; j < clusters.length; j++) {
+      const B = clusters[j]; if (!B) continue;
+      let dot = 0;
+      for (const [w, v] of B.cen) { const x = A.cen.get(w); if (x) dot += v * x; }
+      if (dot / (A.norm * B.norm) < MERGE) continue;
+      A.items.push(...B.items); A.last = Math.max(A.last, B.last);
+      for (const [w, v] of B.cen) A.cen.set(w, (A.cen.get(w) || 0) + v);
+      let s2 = 0; for (const x of A.cen.values()) s2 += x * x;
+      A.norm = Math.sqrt(s2);
+      clusters[j] = null;
+    }
+  }
+  for (let i = clusters.length - 1; i >= 0; i--) if (!clusters[i]) clusters.splice(i, 1);
+  // Un article isolé mais « À la une » (souvent un direct au titre fourre-tout) rejoint l'événement
+  // le plus proche s'il y en a un, plutôt que d'apparaître comme une info majeure de plus.
+  for (let i = clusters.length - 1; i >= 0; i--) {
+    const B = clusters[i];
+    if (B.items.length !== 1 || uneRank(B.items[0], now) > 10) continue;
+    let best = null, bestS = 0;
+    for (const A of clusters) {
+      if (A === B || A.items.length < 3 || Math.abs(A.last - B.last) > 12 * 3600e3) continue;
+      let dot = 0;
+      for (const [w, v] of B.cen) { const x = A.cen.get(w); if (x) dot += v * x; }
+      const sim = dot / (A.norm * B.norm);
+      if (sim > bestS) { bestS = sim; best = A; }
+    }
+    if (best && bestS >= 0.15) {
+      best.items.push(...B.items); best.last = Math.max(best.last, B.last);
+      clusters.splice(i, 1);
+    }
+  }
+  // Évaluation de chaque événement.
+  const evs = [];
+  for (const c of clusters) {
+    const list = c.items;
+    const une = Math.min(...list.map(i => uneRank(i, now)));
+    if (list.length < 2 && une > UNE_TOP) continue;
+    const media = new Set(list.map(i => i.src));
+    const chrono = list.filter(i => !i.bulk).sort((a, b) => a.t - b.t), win = new Map();
+    let peak = 0;
+    for (let hi = 0, lo = 0; hi < chrono.length; hi++) {
+      win.set(chrono[hi].src, (win.get(chrono[hi].src) || 0) + 1);
+      while (chrono[lo].t < chrono[hi].t - HOT_WINDOW) {
+        const k = chrono[lo].src, n = win.get(k) - 1;
+        if (n) win.set(k, n); else win.delete(k);
+        lo++;
+      }
+      if (win.size > peak) peak = win.size;
+    }
+    const graveMedia = new Set(list.filter(i => GRAVE.test(i.nt) && !ANTICIP.test(i.nt)).map(i => i.src));
+    const urgent = list.some(i => URGENT_STRICT(i.title));
+    const ok = une <= UNE_TOP || peak >= prefs.majMin || (graveMedia.size >= 2 && peak >= 4)
+      || (urgent && media.size >= 2) || (une <= 10 && peak >= 3);
+    if (!ok) continue;
+    const top = [...c.cen.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(e => e[0]);
+    const sig = top.slice(0, 3);
+    if (ignoredSig(sig)) continue;
+    const uneList = list.reduce((best, i) => i.une && (i.une.list || []).length > best.length ? i.une.list : best, []);
+    for (const x of uneList) if (x.src) media.add(x.src);
+    const why = [];
+    if (une <= 10) why.push(`${une === 1 ? "1er" : une + "e"} sujet à la une de Google Actualités`);
+    if (peak >= 3) why.push(`${peak} médias en moins de 3 h`);
+    if (graveMedia.size >= 2) why.push("fait grave");
+    if (urgent) why.push("titre ALERTE ou URGENT");
+    list.sort((a, b) => b.t - a.t);
+    // Point de départ : parmi les toutes premières dépêches (3 h après la première), celle qui résume
+    // le mieux l'événement ; la toute première est parfois un article d'annonce trop vague.
+    const simTo = i => {
+      let dot = 0, nn = 0;
+      for (const w of i.words) { const v = idf.get(w) || 0; if (v > 0.5) { nn += v * v; const cw = c.cen.get(w); if (cw) dot += v * cw; } }
+      return nn ? dot / (Math.sqrt(nn) * c.norm) : 0;
+    };
+    const early = chrono.filter(i => i.t <= chrono[0].t + HOT_WINDOW).slice(0, 4);
+    const origin = early.sort((a, b) => simTo(b) - simTo(a) || a.t - b.t)[0] || list[list.length - 1];
+    // Dernier développement : la dépêche la plus récente dont l'heure est fiable.
+    const latest = list.find(i => !i.bulk) || list[0];
+    evs.push({items: list, media, n: media.size, peak, urgent, une, uneList, why, sig, top, grave: graveMedia.size >= 2,
+      rep: latest, origin, first: chrono.length ? chrono[0].t : origin.t, last: latest.t});
+  }
+  // Classement : ampleur de la reprise, avec un bonus pour la gravité et le rang « À la une ».
+  const score = ev => ev.peak + (ev.grave ? 3 : 0) + (ev.urgent ? 5 : 0) + (ev.une <= 10 ? (11 - ev.une) * 0.7 : 0);
+  evs.sort((a, b) => score(b) - score(a) || b.n - a.n || b.last - a.last);
+  events = evs.slice(0, prefs.majCap);
+  for (const ev of events) for (const it of ev.items) it.maj = {ev, n: ev.n, urgent: ev.urgent, rep: it === ev.rep};
+  if (CADENCE) window.__clusters = clusters.filter(c => c.items.length > 1 || c.items.some(i => uneRank(i, now) <= 10)).map(c => ({
+    n: new Set(c.items.map(i => i.src)).size, k: c.items.length, une: Math.min(...c.items.map(i => uneRank(i, now))),
+    sig: [...c.cen.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]).join(","),
+    titles: c.items.map(i => (i.bulk ? "[lot] " : "") + i.src + ": " + i.title.slice(0, 70))}));
+  if (CADENCE) window.__fil = {clusters: clusters.length, evs: evs.map(e => `${e.peak}/${e.n} une:${e.une} [${e.sig.join(",")}] ${e.rep.title.slice(0, 60)}`), events: events.length};
+  return events;
+}
+
+let analysisTimer = null;
+function scheduleAnalysis() {
+  clearTimeout(analysisTimer);
+  analysisTimer = setTimeout(runAnalysis, 700);
+}
+function runAnalysis() {
+  const evs = analyze();
+  journalize(evs);
+  followEvents(evs);
+  const toNotify = [];
+  for (const ev of evs) {
+    const already = ev.items.some(it => notified.has(it.id));
+    ev.items.forEach(it => notified.add(it.id));
+    if (!already && booted && passesPrefs(ev.rep) && Date.now() - ev.last < HOT_WINDOW) toNotify.push(ev.rep);
+  }
+  if (toNotify.length) notify(toNotify.slice(0, 2));
+  scheduleRender();
+}
+function resetMajors() {
+  for (const it of items) it.maj = null;
+  events = [];
+  notified.clear();
+  const wasBooted = booted; booted = false; runAnalysis(); booted = wasBooted;
+}
+
+let audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+    o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.27);
+  } catch (e) {}
+}
+function notify(list) {
+  if (prefs.sound) beep();
+  const canNotify = prefs.notif && "Notification" in window && Notification.permission === "granted";
+  if (!canNotify || !document.hidden) return;
+  for (const it of list.slice(0, 3)) {
+    try {
+      const head = it.maj ? (it.maj.urgent ? "Le Fil · urgent" : `Le Fil · info majeure${it.maj.n >= 2 ? ` (${it.maj.n} médias)` : ""}`) : "Le Fil · alerte " + it.al;
+      const n = new Notification(head, {body: it.title + "\n" + it.src, tag: it.link});
+      n.onclick = () => { window.focus(); window.open(it.link, "_blank", "noopener"); n.close(); };
+    } catch (e) {}
+  }
+}
+
+/* ---------- Lecture des flux ---------- */
+function decode(buf, ct) {
+  let cs = (/charset=["']?([\w-]+)/i.exec(ct || "") || [])[1];
+  if (!cs) {
+    const head = new TextDecoder("windows-1252").decode(new Uint8Array(buf.slice(0, 300)));
+    cs = (/encoding=["']([\w-]+)["']/i.exec(head) || [])[1];
+  }
+  try { return new TextDecoder(cs || "utf-8").decode(buf); } catch (e) { return new TextDecoder("utf-8").decode(buf); }
+}
+function pick(el, names) {
+  for (const n of names) for (const c of el.children) if (c.nodeName.toLowerCase() === n) return c;
+  for (const n of names) for (const c of el.children) if (c.localName.toLowerCase() === n) return c;
+  return null;
+}
+const txt = el => el ? el.textContent.trim() : "";
+function fromNode(el) {
+  let link = "";
+  for (const c of el.children) {
+    if (c.localName !== "link") continue;
+    const href = c.getAttribute("href"), rel = c.getAttribute("rel");
+    if (href && (!rel || rel === "alternate")) { link = href; break; }
+    if (!href && c.textContent.trim()) { link = c.textContent.trim(); break; }
+  }
+  if (!link) {
+    const g = pick(el, ["feedburner:origlink", "origlink", "guid", "id"]);
+    if (g && /^https?:\/\//.test(txt(g))) link = txt(g);
+  }
+  const d = txt(pick(el, ["pubdate", "dc:date", "published", "updated", "issued", "date"]));
+  return {
+    title: stripHtml(txt(pick(el, ["title"]))),
+    link: link.trim(),
+    date: d ? Date.parse(d) : NaN,
+    sum: stripHtml(txt(pick(el, ["description", "summary", "content:encoded", "content"]))),
+    raw: txt(pick(el, ["description"])),
+    src: stripHtml(txt(pick(el, ["source"]))),
+    srcUrl: (pick(el, ["source"]) || {getAttribute: () => ""}).getAttribute("url") || ""
+  };
+}
+function parseLoose(text) {
+  const out = [], re = /<(item|entry)\b[\s\S]*?<\/\1>/gi;
+  const cdata = s => s.replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/, "$1");
+  let m;
+  while ((m = re.exec(text))) {
+    const b = m[0];
+    const get = n => { const r = new RegExp("<" + n + "\\b[^>]*>([\\s\\S]*?)</" + n + ">", "i").exec(b); return r ? cdata(r[1]) : ""; };
+    let link = get("link");
+    if (!link) { const h = /<link\b[^>]*href=["']([^"']+)["']/i.exec(b); link = h ? h[1] : ""; }
+    const d = get("pubDate") || get("dc:date") || get("published") || get("updated");
+    out.push({title: stripHtml(get("title")), link: stripHtml(link), date: d ? Date.parse(d.trim()) : NaN,
+      sum: stripHtml(get("description") || get("summary")), raw: get("description"), src: stripHtml(get("source")),
+      srcUrl: (/<source\b[^>]*url=["']([^"']+)["']/i.exec(b) || [])[1] || ""});
+  }
+  return out;
+}
+function parse(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (!doc.getElementsByTagName("parsererror").length) {
+    const nodes = [...doc.getElementsByTagNameNS("*", "item"), ...doc.getElementsByTagNameNS("*", "entry")];
+    return nodes.map(fromNode);
+  }
+  return parseLoose(text);
+}
+function rubOf(link, fallback) {
+  let r = null;
+  try {
+    const u = new URL(link);
+    if (u.hostname === "news.google.com") return fallback;
+    const segs = decodeURIComponent(u.pathname).split("/").filter(Boolean);
+    segs.pop();
+    for (const s of segs) {
+      const k = norm(s);
+      if (SEG[k]) r = SEG[k];
+      else if (/-(75|77|78|91|92|93|94|95)$/.test(k)) r = "Île-de-France";
+    }
+  } catch (e) {}
+  return r || fallback;
+}
+
+/* Requête Google combinée : retrouve le média d'origine d'après l'adresse fournie par Google. */
+function siteOf(f, e) {
+  if (!f.sites) return null;
+  let host = "";
+  try { host = new URL(e.srcUrl).hostname.replace(/^www\./, ""); } catch (err) {}
+  for (const [dom, m] of Object.entries(f.sites)) {
+    const d = dom.split("/")[0];
+    if (host && (host === d || host.endsWith("." + d))) return m;
+  }
+  const byName = Object.values(f.sites).find(m => norm(m.n) === norm(e.src));
+  return byName || (e.src ? {n: e.src, r: f.r, l: f.l} : null);
+}
+
+/* Grappe d'articles liés que Google liste sous un sujet « À la une » (titre, média, lien). */
+function clusterOf(raw) {
+  if (!raw || !/<li/i.test(raw)) return [];
+  const doc = htmlParser.parseFromString(raw, "text/html");
+  return [...doc.querySelectorAll("li")].slice(0, 10).map(li => {
+    const a = li.querySelector("a"), font = li.querySelector("font");
+    return {title: a ? a.textContent.trim() : "", link: a ? a.getAttribute("href") || "" : "", src: font ? font.textContent.trim() : ""};
+  }).filter(c => c.title && /^https?:/.test(c.link));
+}
+function markUne(it, rank, cluster, now) {
+  const u = it.une || {r: rank, first: now, list: []};
+  u.r = Math.min(u.r, rank); u.at = now;
+  if (cluster.length > (u.list || []).length) u.list = cluster;
+  it.une = u;
+}
+
+function ingest(f, entries) {
+  const now = Date.now(), minT = now - MAX_AGE_H * 3600e3, fresh = [];
+  let added = 0, rank = 0;
+  // Plafond quotidien (f.q) : au plus q dépêches de ce flux sur 24 h glissantes, les plus récentes d'abord.
+  let room = f.q ? f.q - items.reduce((n, o) => n + (o.src === f.n && now - o.t < 864e5 ? 1 : 0), 0) : Infinity;
+  // Un flux qui date 5 articles ou plus de la même minute a été « republié » d'un bloc :
+  // ces heures-là ne disent pas quand chaque article est sorti.
+  for (const e of entries.slice(0, f.sites ? 100 : 60)) {
+    if (!e.title || !/^https?:\/\//i.test(e.link)) continue;
+    rank++;
+    let title = e.title;
+    const viaGoogle = f.g || f.useFb;
+    if (viaGoogle && e.src && title.endsWith(" - " + e.src)) title = title.slice(0, -(e.src.length + 3)).trim();
+    const dated = Number.isFinite(e.date);
+    if (!dated && !f.base) continue;               // sans date, impossible de la placer sur le fil au premier relevé
+    const t = dated ? Math.min(e.date, now) : now;
+    if (t < minT) continue;
+    const ku = "u:" + e.link.replace(/[?#].*$/, "").replace(/\/$/, "");
+    const kt = "t:" + tkey(title);
+    const same = byKey.get(ku);
+    if (same && same.src === f.n && same.id !== kt && !byKey.has(kt)) {
+      // Même article, titre changé : typiquement un direct (« DIRECT. … ») mis à jour avec la nouvelle info.
+      byKey.delete(same.id);
+      if (!viaGoogle && e.sum && e.sum !== title) same.sum = clip(e.sum, 280);
+      same.title = title; same.id = kt; same.nt = norm(title); same.n = norm(title + " " + same.sum);
+      same.words = wordsOf(title); same.caps = capsOf(title); same.al = alertOf(same.n); same.cyc = cycloOf(same);
+      byKey.set(kt, same);
+      followCheck(same, false);
+      const isLive = /^\s*(direct|en direct|live)\b/i.test(title);
+      const newT = dated && t > same.t + 60e3 ? t : (isLive ? now : 0);
+      if (f.base && newT) {
+        same.t = newT; same.arr = now; same.flashed = false;
+        if (now - newT < FRESH_WINDOW) { same.fresh = true; fresh.push(same); }
+      }
+      added++;
+      continue;
+    }
+    // Même article vu à la fois dans le flux du média et chez Google, avec un titre légèrement différent
+    // (ajout, ponctuation) : on le reconnaît pour ne pas l'afficher deux fois, dans les deux sens.
+    let fuzzy = null;
+    if (!same && !byKey.has(kt)) {
+      const site = viaGoogle ? siteOf(f, e) : {n: f.n}, ws = new Set(wordsOf(title));
+      if (site && ws.size >= 3) {
+        // Depuis Google : d'abord un article encore daté en lot, sinon n'importe quel article du média.
+        // Depuis le flux du média : un article déjà reçu par Google.
+        const pools = viaGoogle ? [o => o.bulk, o => !o.g] : [o => o.g];
+        for (const ok of pools) {
+          let best = 0, cand = null;
+          for (const o of items) {
+            if (o.src !== site.n || !ok(o) || Math.abs(o.t - (dated ? t : now)) > 36 * 3600e3) continue;
+            let inter = 0; for (const w of o.words) if (ws.has(w)) inter++;
+            const jac = inter / (ws.size + o.words.length - inter);
+            if (jac > best) { best = jac; cand = o; }
+          }
+          if (best >= 0.7) { fuzzy = cand; break; }
+        }
+      }
+      if (fuzzy && !viaGoogle) {                // l'article est déjà là grâce à Google, avec la bonne heure
+        if (fuzzy.g) fuzzy.link = e.link;
+        continue;
+      }
+    }
+    if (same || byKey.has(kt) || fuzzy) {
+      const known = same || byKey.get(kt) || fuzzy;
+      if (f.une && rank <= 30) { markUne(known, rank, clusterOf(e.raw), now); added++; }
+      // Article daté en lot par son propre flux : Google Actualités connaît sa vraie heure.
+      if (viaGoogle && dated && known.bulk && known.src === (siteOf(f, e) || {}).n) {
+        known.t = t; known.bulk = false; known.dated = true; known.dq = "ok"; known.dqBy = "google";
+        if (now - t > FRESH_WINDOW) known.fresh = false;
+        added++;
+      }
+      continue;
+    }
+    if (room <= 0) continue;
+    room--;
+    const sum = viaGoogle ? "" : clip(e.sum === title ? "" : e.sum, 280);
+    const site = siteOf(f, e);
+    const it = {title, link: e.link, src: site ? site.n : f.une ? (e.src || "Google Actualités") : f.n,
+      rub: rubOf(e.link, site ? site.r : f.r), lang: site ? site.l : f.l, t, dated, sum,
+      arr: now, fresh: false, held: false, flashed: false, n: norm(title + " " + sum), nt: norm(title), al: null, maj: null, id: kt};
+    it.words = wordsOf(title); it.caps = capsOf(title);
+    it.al = alertOf(it.n);
+    it.g = !!(f.g || f.useFb);
+    it.spe = f.v === "velo" || SPE_SRC.has(it.src);
+    if (it.spe) it.rub = "Cyclisme";
+    it.cyc = cycloOf(it);
+    if (f.une && rank <= 30) markUne(it, rank, clusterOf(e.raw), now);
+    if (f.base && now - t < FRESH_WINDOW) { it.fresh = true; fresh.push(it); }
+    byKey.set(ku, it); byKey.set(kt, it); items.push(it); added++;
+    followCheck(it, false);
+  }
+  f.base = true;
+  flushFollows();
+  if (added) { markBulk(); scheduleAnalysis(); }
+  if (fresh.length) onFresh(fresh);
+  else if (added) scheduleRender();
+}
+
+/* Un même média qui date 5 articles ou plus de la même minute les a republiés d'un bloc : ces heures
+   ne disent pas quand chaque article est sorti. Vérifié sur toute la mémoire, y compris ce qui a été
+   enregistré par une version précédente de la page. Une heure déjà vérifiée n'est jamais remise en cause. */
+function markBulk() {
+  const per = new Map();
+  for (const it of items) {
+    if (it.g || it.dq === "ok" || !it.dated) continue;
+    const k = it.src + "|" + Math.floor(it.t / 60e3);
+    per.set(k, (per.get(k) || 0) + 1);
+  }
+  for (const it of items) {
+    if (it.g || it.dq === "ok" || !it.dated) { it.bulk = false; continue; }
+    // Une fois repéré, un article daté en lot le reste jusqu'à ce que sa vraie heure soit trouvée,
+    // même si ses voisins de lot ont été corrigés entre-temps.
+    it.bulk = it.bulk || per.get(it.src + "|" + Math.floor(it.t / 60e3)) >= 5;
+    if (it.bulk) queueDate(it);
+  }
+}
+
+/* ---------- Heure réelle des articles datés en lot ----------
+   Quand un flux date plusieurs articles de la même minute (mise à jour groupée du site),
+   le relais ouvre la page de chaque article et y lit son heure de publication. */
+const dateQueue = [];
+let dateBusy = 0, dateDirty = false, dateTimer = null;
+function queueDate(it) {
+  if (!it.bulk || it.dq) return;
+  it.dq = "attente";
+  dateQueue.push(it);
+  pumpDates();
+}
+function pumpDates() {
+  while (dateBusy < 2 && dateQueue.length) {
+    dateQueue.sort((a, b) => b.t - a.t);                  // les plus visibles d'abord
+    const it = dateQueue.shift();
+    dateBusy++;
+    fetch("/date?url=" + encodeURIComponent(it.link), {cache: "force-cache"})
+      .then(r => r.ok ? r.json() : r.text().then(t => { it.dqErr = t.slice(0, 80); return null; }))
+      .then(j => {
+        const t = j && j.date ? Date.parse(j.date) : NaN, now = Date.now();
+        if (Number.isFinite(t) && t <= now + 60e3 && t > now - 7 * 864e5) {
+          it.t = Math.min(t, now); it.bulk = false; it.dated = true; it.dq = "ok";
+          if (now - it.t > FRESH_WINDOW) it.fresh = false;
+          dateDirty = true;
+        } else { it.dq = "echec"; it.dqErr = j ? "heure absente de la page" : (it.dqErr || "page refusée"); }
+      })
+      .catch(() => { it.dq = "echec"; it.dqErr = "relais injoignable"; })
+      .finally(() => {
+        dateBusy--;
+        clearTimeout(dateTimer);
+        dateTimer = setTimeout(() => { if (dateDirty) { dateDirty = false; scheduleAnalysis(); scheduleRender(); } }, 800);
+        pumpDates();
+      });
+  }
+}
+
+/* ---------- Mémoire des dernières 24 h (sur cet appareil) ----------
+   Permet de rouvrir Le Fil sans repartir de zéro, et donne à la détection
+   des infos majeures une vraie ligne de base. */
+const ITEMS_KEY = "lefil.items";
+function saveItems() {
+  const min = Date.now() - MAX_AGE_H * 3600e3;
+  const rows = items.filter(it => it.t >= min).map(it =>
+    [it.title, it.link, it.src, it.rub, it.lang, it.t, it.dated ? 1 : 0, it.sum, it.une || 0, it.bulk ? 1 : 0, it.g ? 1 : 0, it.dq === "ok" ? 1 : 0, it.spe ? 1 : 0]);
+  for (const light of [false, true]) {
+    try {
+      localStorage.setItem(ITEMS_KEY, JSON.stringify({v: 1, at: Date.now(), rows: light ? rows.map(r => { r = r.slice(); r[7] = ""; return r; }) : rows}));
+      return;
+    } catch (e) {}
+  }
+}
+function restoreItems() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(ITEMS_KEY) || "null"); } catch (e) { return; }
+  if (!data || data.v !== 1 || !Array.isArray(data.rows)) return;
+  const min = Date.now() - MAX_AGE_H * 3600e3;
+  for (const [title, link, src, rub, lang, t, dated, sum, une, bulk, g, verified, spe] of data.rows) {
+    if (!title || !link || t < min) continue;
+    const ku = "u:" + link.replace(/[?#].*$/, "").replace(/\/$/, ""), kt = "t:" + tkey(title);
+    if (byKey.has(ku) || byKey.has(kt)) continue;
+    const it = {title, link, src, rub, lang, t, dated: !!dated, sum: sum || "", arr: t, fresh: false, held: false, flashed: true,
+      n: norm(title + " " + (sum || "")), nt: norm(title), al: null, maj: null, id: kt, une: une || null,
+      bulk: !!bulk, g: !!g || /news\.google\.com/.test(link), dq: verified ? "ok" : undefined, spe: !!spe || SPE_SRC.has(src)};
+    it.words = wordsOf(title); it.caps = capsOf(title);
+    it.al = alertOf(it.n); it.cyc = cycloOf(it);
+    byKey.set(ku, it); byKey.set(kt, it); items.push(it);
+  }
+}
+
+const atTop = () => window.scrollY < 120;
+const inView = it => ui.rub === "Cyclisme" ? it.cyc : !it.spe;
+function onFresh(list) {
+  const top = atTop();
+  for (const it of list) {
+    if (!inView(it)) continue;                  // la presse vélo ne gonfle pas le compteur du fil général
+    if (!top) { it.held = true; ui.held++; }
+    if (document.hidden || !top) ui.unseen++;
+  }
+  const alerts = list.filter(it => it.al && !it.spe && passesPrefs(it));
+  if (alerts.length) notify(alerts);
+  updatePill(); updateTitle(); scheduleRender();
+}
+function release() {
+  if (!ui.held) return;
+  for (const it of items) it.held = false;
+  ui.held = 0; updatePill(); scheduleRender(true);
+}
+
+/* ---------- Relevés ---------- */
+const interval = f => (CADENCE ? CADENCE * 1e3 * f.t : TIER_MS[f.t]) * (prefs.eco ? 3 : 1);
+const paused = () => document.hidden && !(prefs.notif && "Notification" in window && Notification.permission === "granted");
+
+/* Traduit l'erreur technique en phrase compréhensible. */
+function explain(msg) {
+  const m = /répondu (\d{3})/.exec(msg || "");
+  if (m) {
+    const c = +m[1];
+    if (c === 401 || c === 403) return `bloqué par le site (${c})`;
+    if (c === 404 || c === 410) return `flux introuvable, adresse changée (${c})`;
+    if (c === 429) return "trop de requêtes, le site nous limite (429)";
+    if (c >= 500) return `site indisponible pour l'instant (${c})`;
+    return `refusé par le site (${c})`;
+  }
+  if (/délai/.test(msg)) return "le site met trop de temps à répondre";
+  if (/ne répond pas/.test(msg)) return "site injoignable";
+  return msg;
+}
+const isHard = msg => /répondu (401|403|404|410)\b|illisible/.test(msg || "");
+/* Un média dont le secours Google est déjà relevé par un autre de ses flux n'est pas relevé deux fois. */
+const dormant = f => f.useFb && feeds.some(o => o.i < f.i && o.useFb && o.b === f.b && !isMutedName(o.n));
+const urlOf = f => f.useFb ? f.b : f.u;
+
+async function load(f) {
+  f.busy = true; inflight++; setBusy();
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const res = await fetch(RELAIS + encodeURIComponent(urlOf(f)), {cache: "no-store", signal: ctl.signal});
+    if (!res.ok) {
+      const msg = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 120);
+      throw new Error(res.status === 404 && !msg.startsWith("Le média") ? "relais introuvable (404)" : (msg || "erreur " + res.status));
+    }
+    const text = decode(await res.arrayBuffer(), res.headers.get("content-type"));
+    const entries = parse(text);
+    if (!entries.length && !/<(rss|feed|rdf)\b/i.test(text)) throw new Error("réponse illisible : le site renvoie une page au lieu d'un flux");
+    ingest(f, entries);
+    f.st = "ok"; f.err = ""; f.fails = 0; f.hard = 0; f.cnt = entries.length;
+    f.next = Date.now() + interval(f) * (0.9 + Math.random() * 0.2);
+  } catch (e) {
+    f.st = "err"; f.fails++;
+    f.err = e.name === "AbortError" ? "délai dépassé" : (e instanceof TypeError ? "relais injoignable" : e.message);
+    f.next = Date.now() + interval(f) * Math.min(2 ** f.fails, 8);
+    if (isHard(f.err)) f.hard++;
+    if (f.hard >= 2 && f.b && !f.useFb) {                // bascule sur le secours Google Actualités
+      f.useFb = true; f.base = false; f.fails = 0; f.hard = 0; f.next = Date.now();
+    } else if (f.useFb && f.fails >= 3) {                // le secours échoue aussi : on retente le flux du média
+      f.useFb = false; f.base = false; f.fails = 0; f.hard = 0;
+    }
+  } finally {
+    clearTimeout(timer);
+    f.at = Date.now(); f.busy = false; inflight--; ui.lastPoll = Date.now();
+    if (!booted && feeds.every(o => o.st !== "wait" || isMutedName(o.n) || (prefs.fr && o.l !== "fr"))) booted = true;
+    setBusy(); updateStatus(); checkRelay();
+    if ($("#dlg-sources").open) renderSources();
+    pump();
+  }
+}
+function pump() {
+  if (paused()) return;
+  const now = Date.now();
+  const due = feeds.filter(f => !f.busy && f.next <= now && !isMutedName(f.n) && !(prefs.fr && f.l !== "fr") && !dormant(f))
+    .sort((a, b) => a.next - b.next || a.t - b.t);
+  for (const f of due) { if (inflight >= CONCURRENCY) break; load(f); }
+  if (booted) for (const s of follows) {           // recherches Google des sujets suivis, une fois le fil chargé
+    if (inflight >= CONCURRENCY) break;
+    if (s.g && !s.busy && s.next <= now) loadFollow(s);
+  }
+}
+const setBusy = () => $("#busy").classList.toggle("on", inflight > 0);
+
+function checkRelay() {
+  if (!navigator.onLine) {
+    $("#banner").textContent = "Hors connexion : tu vois les dépêches enregistrées sur cet appareil. Le Fil reprend tout seul dès que le réseau revient.";
+    $("#banner").hidden = false;
+    return;
+  }
+  const tried = feeds.filter(f => f.st !== "wait");
+  const ok = tried.filter(f => f.st === "ok").length;
+  const banner = $("#banner");
+  if (!ok && tried.length >= 8) {
+    const relayDown = tried.every(f => /relais/.test(f.err));
+    banner.textContent = relayDown
+      ? (location.protocol === "file:"
+          ? "Cette page doit être ouverte depuis l'adresse de ton relais Cloudflare (…workers.dev), pas comme fichier."
+          : "Le relais ne répond pas. Vérifie ta connexion, puis que le Worker Cloudflare est bien déployé.")
+      : "Aucun flux n'a pu être lu pour l'instant. Première erreur : " + tried[0].err;
+    banner.hidden = false;
+  } else banner.hidden = true;
+}
+
+/* ---------- Fiche d'une info majeure (cartes Anki), sans IA ----------
+   Tout vient des titres et des chapôs des articles regroupés dans l'événement ; rien n'est rédigé.
+   - titre : le sujet que les rédactions écrivent avant les deux-points (« Procès Dati-Ghosn : … »), s'il
+     revient dans au moins deux titres, sinon celui du titre de départ ou du dernier titre, sinon le nom
+     le plus cité ; complété par ce nom quand le sujet n'en contient aucun (deux « Blocus des lycées »
+     de deux jours différents ne se confondent pas) ;
+   - faits : le titre le plus représentatif, le dernier développement, le chapô le plus représentatif ;
+   - qui : les noms propres les plus cités (personnes, mais aussi lieux et organisations) ;
+   - en quoi c'est important : l'ampleur mesurée par Le Fil, et une phrase de contexte reprise telle
+     quelle d'un titre ou d'un chapô (« une première », « record », « sans précédent »…), s'il y en a une. */
+const FICHE_PREFIX = /^\s*(?:\[[^\]]{1,24}\]|(?:en )?direct|live|vid[ée]o|info [\p{L}'’ -]{2,25}|alerte(?: info)?|urgent|flash(?: info)?|carte|infographie|graphique|r[ée]cit|enqu[êe]te|entretien|interview|tribune|[ée]dito(?:rial)?|analyse|d[ée]cryptage|podcast|photos?|reportage|exclusif|chronique|replay|t[ée]moignages?|breaking(?: news)?|[ée]dition sp[ée]ciale)\s*[.:!|–-]+\s*/iu;
+const PICTO = /^[\p{Extended_Pictographic}️‍\s]+/u;
+function cleanHeadline(t) {
+  let s = String(t || "").replace(PICTO, "").trim(), prev;
+  do { prev = s; s = s.replace(FICHE_PREFIX, "").replace(PICTO, ""); } while (s !== prev);
+  s = s.replace(/\s+\|\s+[^|]{1,60}$/, "").replace(/\s+\[[^\]]{1,30}\]$/, "");   // « … | Foot - Ligue des nations »
+  return s.replace(/\s+/g, " ").trim();
+}
+// Titres qui résument plusieurs sujets à la fois : ni un fait, ni un contexte.
+const ROUNDUP = /\b(l.actu(alit[ée])? (de|du) |l.essentiel|ce qu.il faut retenir|les infos? (du|de ce)|revue de presse|en bref|le point sur l.actualit[ée]|les titres)\b/i;
+const GENERIC_LABEL = new Set(("france|monde|international|europe|politique|economie|societe|justice|sport|sports|football|foot|culture|sante|"
+  + "faits divers|direct|video|info|infos|actu|actualite|alerte|exclusif|analyse|decryptage|meteo|en bref|a la une|l essentiel|objectif atteint|"
+  + "ce qu il faut savoir|ce que l on sait|on vous explique|explications|temoignage|reportage|questions|watch|live|breaking|explainer|analysis|opinion").split("|"));
+function headlineLabel(t) {                                 // « Sujet : fait » -> « Sujet »
+  const m = /^(.{3,48}?)\s?[:：]\s+(.{12,})$/u.exec(t);
+  if (!m) return null;
+  const lab = m[1].trim(), k = norm(lab).replace(/[^a-z0-9]+/g, " ").trim();
+  if (/^[«"“]/.test(lab) || /[»"”]$/.test(lab) || lab.split(/\s+/).length > 9 || GENERIC_LABEL.has(k)) return null;
+  return lab;
+}
+const NAME_JOIN = new Set(["le", "la", "van", "von", "der", "den", "al", "el", "ben", "bin", "da", "di", "dos", "del"]);
+const NAME_SKIP = new Set(("le la les l un une des du de d au aux ce ces cet cette il elle ils elles on nous vous je tu son sa ses leur leurs "
+  + "mon ma mes et ou mais pour par sur dans avec sans apres avant selon qui que quoi comment pourquoi quand face contre entre vers chez "
+  + "lundi mardi mercredi jeudi vendredi samedi dimanche janvier fevrier mars avril mai juin juillet aout septembre octobre novembre decembre "
+  + "direct video info alerte urgent exclusif carte photos replay edito tribune enquete entretien recit analyse suivez voici "
+  + "ce cela ceci comme tout tous toute toutes plus moins tres bien si oui non").split(" "));
+function namesOf(titles) {
+  const tokenize = t => t.replace(/’/g, "'").replace(/(^|[\s«"“(])([dDlLjJsSnNcCmMtT]|[qQ]u)'(?=\p{L})/gu, "$1$2' ").split(/\s+/).filter(Boolean);
+  const bare = w => w.replace(/^[^\p{L}\d]+|[^\p{L}\d]+$/gu, "");
+  const isCap = w => /^\p{Lu}/u.test(w) && !NAME_SKIP.has(norm(w));
+  const starts = (toks, i) => i === 0 || /[:.!?«"“(]$/.test(toks[i - 1]) || /^[«"“(]/.test(toks[i]);
+  const capN = new Map(), lowN = new Map();
+  for (const t of titles) tokenize(t).forEach((w, i, toks) => {
+    const b = bare(w), k = norm(b); if (!b || starts(toks, i)) return;
+    if (/^\p{Lu}/u.test(b)) capN.set(k, (capN.get(k) || 0) + 1); else lowN.set(k, (lowN.get(k) || 0) + 1);
+  });
+  // Un mot plus souvent écrit en minuscules (« propos », « première ») n'est pas un nom propre.
+  const proper = w => { const k = norm(w); return (capN.get(k) || 0) > (lowN.get(k) || 0); };
+  const count = new Map();
+  titles.forEach((t, idx) => {
+    const toks = tokenize(t), seen = new Set();
+    for (let i = 0; i < toks.length; i++) {
+      const w = bare(toks[i]);
+      if (!w || !isCap(w) || !proper(w)) continue;
+      const parts = [w];
+      let j = i + 1;
+      while (j < toks.length && !/[,:;.!?»")]$/.test(toks[j - 1])) {
+        const x = bare(toks[j]);
+        if (x && isCap(x) && proper(x)) { parts.push(x); j++; continue; }
+        if (NAME_JOIN.has(toks[j].toLowerCase()) && j + 1 < toks.length && isCap(bare(toks[j + 1]))) { parts.push(toks[j]); j++; continue; }
+        break;
+      }
+      i = j - 1;
+      const name = parts.join(" ");
+      if (name.length < 2 || (name.length < 3 && !/^\p{Lu}+$/u.test(name)) || /^\d+$/.test(name)) continue;
+      const k = norm(name);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const e = count.get(k) || {name, items: new Set()};
+      e.items.add(idx); count.set(k, e);
+    }
+  });
+  let list = [...count.values()];
+  // « Saint-Denis Bally Bagayoko » (apposition sans virgule, dans un seul titre) : coupé en deux noms connus ailleurs.
+  const known = k => count.has(k);
+  for (const e of list.slice()) {
+    const w = e.name.split(" ");
+    if (e.items.size > 1) continue;
+    for (let c = 1; c < w.length; c++) {
+      const a = w.slice(0, c).join(" "), b = w.slice(c).join(" ");
+      if (known(norm(a)) && known(norm(b))) {
+        e.items.forEach(x => { count.get(norm(a)).items.add(x); count.get(norm(b)).items.add(x); });
+        list = list.filter(o => o !== e); break;
+      }
+    }
+  }
+  // « Ghosn-Dati » : deux noms connus ailleurs.
+  for (const e of list.slice()) {
+    const h = e.name.split("-");
+    if (h.length === 2 && h.every(x => [...count.values()].some(o => o !== e && norm(o.name).split(" ").includes(norm(x))))) list = list.filter(o => o !== e);
+  }
+  // Un nom seul (« Dati ») compte pour le nom complet qui le contient (« Rachida Dati »).
+  list.sort((a, b) => b.name.split(" ").length - a.name.split(" ").length || b.items.size - a.items.size);
+  const kept = [];
+  for (const e of list) {
+    const words = norm(e.name).split(/[\s-]+/);
+    const host = kept.find(k => { const kw = norm(k.name).split(/[\s-]+/); return words.every(w => kw.includes(w)); });
+    if (host) e.items.forEach(x => host.items.add(x)); else kept.push(e);
+  }
+  kept.sort((a, b) => b.items.size - a.items.size || a.name.localeCompare(b.name, "fr"));
+  const strong = kept.filter(e => e.items.size >= 2);
+  return (strong.length ? strong : kept).slice(0, 4).map(e => ({name: e.name, share: e.items.size / Math.max(1, titles.length)}));
+}
+const STAKE = /\b(premi[èe]re?s? (fois|femme|homme|depuis)|une premi[èe]re|in[ée]dite?s?|historiques?|records?|jamais|sans pr[ée]c[ée]dent|depuis (19|20)\d\d|enjeux?|cons[ée]quences?|plus (mauvais|grand|haut|bas|lourd|jeune|vieux|important)e?s?|pire|scandale|s[ée]isme|tournant)\b/iu;
+function sentencesOf(text) {
+  return String(text || "").replace(/\s+/g, " ").split(/(?<=[.!?…])\s+(?=[\p{Lu}«"“])/u).map(s => s.trim()).filter(s => s.length >= 25);
+}
+/* ev : événement analysé (items, origin, rep, top, n, peak, une, urgent, uneList). */
+function buildFiche(ev) {
+  const items = ev.items.slice().sort((a, b) => a.t - b.t).filter(i => !ROUNDUP.test(i.title));
+  const base = items.length ? items : ev.items.slice();
+  const heads = base.map(i => cleanHeadline(i.title));
+  const extra = (ev.uneList || []).map(c => cleanHeadline(c.title)).filter(h => !ROUNDUP.test(h));
+  const all = [...heads, ...extra];
+  const topw = new Set(ev.top || ev.sig || []);
+  const score = s => wordsOf(s).filter(w => topw.has(w)).length;
+  const names = namesOf(all);
+  // Titre de la carte
+  const labs = new Map();
+  all.forEach((h, i) => { const l = headlineLabel(h); if (!l) return; const k = norm(l).replace(/[^a-z0-9]+/g, " ").trim(); const e = labs.get(k) || {l, n: 0, i}; e.n++; labs.set(k, e); });
+  const origin = ev.origin || ev.rep, latest = ev.rep;
+  const best = [...labs.values()].sort((a, b) => b.n - a.n || a.i - b.i)[0];
+  const byScore = base.slice().sort((a, b) => score(cleanHeadline(b.title)) - score(cleanHeadline(a.title)) || a.t - b.t);
+  let titre = best && best.n >= 2 ? best.l
+    : [byScore[0], origin, latest, ...byScore].map(i => i && headlineLabel(cleanHeadline(i.title))).find(Boolean)
+      || (names[0] && names[0].share >= 0.3 && names[0].name) || cleanHeadline((byScore[0] || origin).title);
+  titre = titre.charAt(0).toUpperCase() + titre.slice(1);
+  const lead = names.find(x => x.share >= 0.4);
+  if (lead && !/\p{Lu}/u.test(titre.slice(1)) && !norm(titre).includes(norm(lead.name))) titre += " · " + lead.name;
+  // Faits : le titre le plus représentatif, le dernier développement, le chapô le plus représentatif.
+  const main = byScore[0] || origin;
+  const faits = [{s: cleanHeadline(main.title), src: main.src, t: main.t, l: main.link}];
+  if (latest !== main && norm(cleanHeadline(latest.title)) !== norm(faits[0].s)) faits.push({s: cleanHeadline(latest.title), src: latest.src, t: latest.t, l: latest.link});
+  const chapos = base.filter(i => i.sum && i.sum.length >= 40 && norm(i.sum) !== norm(i.title))
+    .map(i => ({i, s: sentencesOf(i.sum).slice(0, 2).join(" ").slice(0, 280)})).filter(c => c.s && score(c.s) >= 1)
+    .sort((a, b) => score(b.s) - score(a.s) || a.i.t - b.i.t);
+  if (chapos[0] && !faits.some(x => norm(chapos[0].s).includes(norm(x.s)))) faits.push({s: chapos[0].s, src: chapos[0].i.src, t: chapos[0].i.t, l: chapos[0].i.link, chapo: true});
+  // Contexte : une phrase qui dit l'enjeu, qui n'est pas déjà dans les faits.
+  const used = faits.map(f => norm(f.s));
+  const pool = [];
+  base.forEach(i => {
+    for (const s of [cleanHeadline(i.title), ...sentencesOf(i.sum)]) if (!used.some(u => u.includes(norm(s)) || norm(s).includes(u))) pool.push({s, src: i.src});
+  });
+  const ctx = pool.filter(p => STAKE.test(p.s) && score(p.s) >= 2 && p.s.length <= 240 && !ROUNDUP.test(p.s))
+    .sort((a, b) => score(b.s) - score(a.s) || a.s.length - b.s.length)[0] || null;
+  // Gravité : les mots forts employés par les titres (prison, attentat, démission…), tels qu'ils sont écrits.
+  const grav = new Map();
+  for (const h of heads) for (const w of h.split(/[^\p{L}-]+/u)) {
+    const k = norm(w);
+    if (k.length >= 4 && GRAVE.test(k) && !ANTICIP.test(k)) { const e = grav.get(k) || {w: w.toLowerCase(), n: 0}; e.n++; grav.set(k, e); }
+  }
+  const gravite = [...grav.values()].filter(e => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 3).map(e => e.w);
+  // Chiffres : dans les titres et les chapôs de l'événement.
+  const texts = [];
+  base.forEach((i, k) => { texts.push({s: cleanHeadline(i.title), src: i.src, item: k}); for (const x of sentencesOf(i.sum)) texts.push({s: x, src: i.src, item: k}); });
+  const chiffres = figuresOf(texts);
+  return {
+    titre, faits, qui: names.map(x => x.name), gravite, chiffres,
+    signes: {peak: ev.peak, une: Number.isFinite(ev.une) && ev.une <= 10 ? ev.une : null, urgent: !!ev.urgent},
+    contexte: ctx ? {s: ctx.s, src: ctx.src} : null,
+  };
+}
+
+/* Chiffres d'une info majeure : les nombres cités par les titres et les chapôs, avec leur unité et le bout de
+   phrase qui les porte (« 164 personnes ont été interpellées »), sans les dates, heures, années ni rangs.
+   Un même chiffre repris par plusieurs articles passe devant : c'est le plus sûr. */
+const NUM_SPELLED = {deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, onze: 11, douze: 12, treize: 13,
+  quatorze: 14, quinze: 15, seize: 16, vingt: 20, trente: 30, quarante: 40, cinquante: 50, soixante: 60, cent: 100, mille: 1000};
+const NUM_UNITS = /^(ans?|mois|semaines?|jours?|heures?|minutes?|morts?|blessés?|victimes?|personnes?|interpellations?|manifestants?|manifestations?|euros?|dollars?|milliards?|millions?|millier|milliers|points?|voix|sièges?|députés?|sénateurs?|habitants?|salariés?|emplois?|postes?|élèves?|lycées?|établissements?|kilomètres?|km|mètres?|degrés?|tonnes?|fois|buts?|étapes?|médailles?|titres?|victoires?|pays|enfants?|femmes?|hommes?|jeunes?|policiers?|gendarmes?|soldats?|otages?|cas|décès)$/iu;
+const MONTHS = /^(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)$/i;
+const NUM_STOP = new Set(["et", "à", "a", "au", "aux", "en", "pour", "par", "sur", "dans", "qui", "que", "ont", "sont", "est", "ou", "le", "la", "les", "l", "ce", "se", "son", "sa", "ses", "avant", "après", "depuis", "contre", "selon", "mais", "dont", "entre"]);
+function figuresOf(texts) {
+  // texts : [{s, src}] ; renvoie [{html, key, n, src}]
+  const found = new Map();
+  const numRe = new RegExp("(?<![\\p{L}\\d])(?:(entre|de|plus de|moins de|près de|au moins|environ|quelque)\\s+)?((?:\\d{1,3}(?:[\\u00a0\\u202f .]\\d{3})+|\\d+)(?:[,.]\\d+)?|" + Object.keys(NUM_SPELLED).join("|") + ")"
+    + "(?:\\s*(?:et|à|-)\\s*((?:\\d{1,3}(?:[\\u00a0\\u202f .]\\d{3})+|\\d+)(?:[,.]\\d+)?))?(\\s?%)?(?![\\p{L}\\d])", "giu");
+  texts.forEach((t, idx) => {
+    const s = t.s; let m;
+    numRe.lastIndex = 0;
+    while ((m = numRe.exec(s))) {
+      const raw = m[2], spelled = NUM_SPELLED[raw.toLowerCase()];
+      const score = m[3] && /^\d{1,2}-\d{1,2}$/.test(m[0].trim()) && s[m.index - 1] === "(";
+      if (score) {                                   // résultat d'un match : « Belgique-France (0-1) »
+        const head = s.slice(0, s.indexOf(")", m.index) + 1).split(/[:,;]/).pop().trim();
+        const e = found.get("score|" + m[0]) || {fig: m[0].trim(), clause: head, src: t.src, items: new Set(), first: idx};
+        e.items.add(t.item ?? idx); found.set("score|" + m[0], e); continue;
+      }
+      const after = s.slice(m.index + m[0].length);
+      const toks = after.replace(/^\s+/, "").split(/\s+/);
+      const next = (toks[0] || "").replace(/[,;:.!?)»"”]+$/, "");
+      const val = spelled ?? Number(raw.replace(/[   .](?=\d{3})/g, "").replace(",", "."));
+      if (!Number.isFinite(val)) continue;
+      if (/^(e|er|ème|eme|re|h)/i.test(after) || /^\s*h\d/i.test(after)) continue;          // rang, heure
+      const before = s.slice(0, m.index);
+      if ((before.match(/"/g) || []).length % 2 === 1 || before.lastIndexOf("«") > before.lastIndexOf("»")) continue;   // dans une citation
+      // Année passée qui date le fait (« écrits datant de 2013 », « depuis 1945 ») : gardée ; les autres années, non.
+      const year = !m[4] && !m[3] && !spelled && /^\d{4}$/.test(raw) && val >= 1900 && val <= 2100;
+      if (year && val < new Date().getFullYear() && /(datant de|datée? de|depuis|dès|en|de)\s*$/i.test(before) && !m[1]) {
+        const k = "an|" + val, e = found.get(k) || {fig: raw, clause: s.trim().length > 150 ? s.trim().slice(0, 148) + "…" : s.trim(), src: t.src, items: new Set(), first: idx};
+        e.items.add(t.item ?? idx); found.set(k, e); continue;
+      }
+      if (MONTHS.test(next)) continue;                                                         // date
+      if (!m[4] && !spelled && /^\d{4}$/.test(raw) && val >= 1900 && val <= 2100 && !NUM_UNITS.test(next)) continue;   // année
+      if (spelled && !NUM_UNITS.test(next)) continue;                                         // « deux » seul
+      if (!m[4] && !spelled && (!next || /^[^\p{Ll}]/u.test(next) || NUM_STOP.has(next.toLowerCase()) || /^(ferme|autres?|premiers?|derniers?)$/i.test(next)) && !NUM_UNITS.test(next)) continue;
+      // Unité : le mot suivant, puis « de/d'/du X », puis « ferme », « avec sursis »…
+      let unit = [];
+      let i = 0;
+      if (!m[4] && toks[i] && !/^[,;:.!?)]/.test(toks[i])) { unit.push(toks[i]); i++; }
+      if (m[4] && /^(du|de|des)$/i.test(toks[0] || "") && toks[1]) { unit.push(toks[0], toks[1]); i = 2; }
+      else if (unit.length && !/[,;:.!?)»"”]$/.test(unit[unit.length - 1])) {
+        if (/^(de|du|des)$/i.test(toks[i] || "") && toks[i + 1]) { unit.push(toks[i], toks[i + 1]); i += 2; }
+        else if (/^d['’]/i.test(toks[i] || "")) { unit.push(toks[i]); i++; }
+        if (!/[,;:.!?)»"”]$/.test(unit[unit.length - 1] || "") && /^(ferme|supplémentaires?|en plus|par an|par mois|par jour)$/i.test(toks[i] || "")) { unit.push(toks[i]); i++; }
+        if (/^avec$/i.test(toks[i] || "") && /^sursis/i.test(toks[i + 1] || "")) { unit.push(toks[i], toks[i + 1]); i += 2; }
+      }
+      const unitTxt = unit.join(" ").replace(/[,;:.!?)»"”]+$/, "");
+      // « de » ou « entre » ne font partie du chiffre que pour une fourchette (« entre 6 000 et 8 000 »).
+      const lead = m[1] && (m[3] || !/^(de|entre)$/i.test(m[1])) ? "" : m[1] ? m[1] : "";
+      const core = lead ? m[0].slice(m[0].indexOf(m[2])) : m[0];
+      const fig = (core + (unitTxt ? " " + unitTxt : "")).replace(/\s+/g, " ").trim();
+      // Bout de phrase qui porte le chiffre.
+      const start = Math.max(s.lastIndexOf(",", m.index), s.lastIndexOf(";", m.index), s.lastIndexOf(":", m.index), s.lastIndexOf("(", m.index), s.lastIndexOf("«", m.index)) + 1;
+      const endRel = after.search(/[,;:(«»]|\.\s|\.$/);
+      let clause = s.slice(start, endRel < 0 ? s.length : m.index + m[0].length + endRel).trim();
+      if (clause.split(/\s+/).length < 4) clause = s.trim();
+      if (clause.length > 150) { const p = clause.indexOf(fig); clause = (p > 60 ? "…" + clause.slice(p - 50) : clause).slice(0, 150).replace(/\s\S*$/, "") + "…"; }
+      const u0 = norm((unit[0] || (m[3] ? "plage" : m[5] ? "pourcent" : ""))).replace(/s$/, "");
+      // Un grand nombre suffit à reconnaître le fait (164 personnes = 164 interpellations) ; un petit garde son unité.
+      const key = m[3] ? val + "-" + m[3] : val > 10 || !Number.isInteger(val) ? String(val) : val + "|" + u0;
+      const e = found.get(key) || {fig, clause, src: t.src, items: new Set(), first: idx};
+      e.items.add(t.item ?? idx); found.set(key, e);
+    }
+  });
+  return [...found.values()].sort((a, b) => b.items.size - a.items.size || a.first - b.first).slice(0, 4)
+    .map(e => ({fig: e.fig, clause: e.clause, src: e.src, n: e.items.size}));
+}
+
+/* ---------- Outils de fichier ---------- */
+function download(content, name, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+const hashStr = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); };
+const slugify = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "sujet";
+const dayWhen = t => fmtDayLong.format(t) + ", " + hm(t);
+
+/* ---------- Sujets suivis ----------
+   Un sujet suivi est un dossier : les dépêches dont le titre ou le chapô contient les mots choisis, gardées
+   au-delà des 48 h du fil (300 par sujet au plus), plus, en option, une recherche Google Actualités sur
+   7 jours, tous médias, relancée toutes les 20 min. Les dépêches d'une info majeure dont une partie est
+   déjà suivie rejoignent aussi le dossier, même si leur titre emploie d'autres mots. Tout reste sur cet appareil. */
+const FOLLOW_KEY = "lefil.suivis", FOLLOW_MAX = 12, FOLLOW_KEEP = 300;
+const FOLLOW_MS = 20 * 60e3, FOLLOW_NOTIF_MS = 20 * 60e3;
+let follows = [];
+let followGone = {};                         // sujets arrêtés : identifiant -> date, pour que l'arrêt se propage
+let followsDirty = false, followSaveTimer = null;
+const followIdx = new Map();                 // clé de titre -> {f: sujet, x: entrée du dossier}
+
+function termRe(tok) {
+  const star = tok.endsWith("*");
+  const parts = norm(tok.replace(/\*+$/, "")).split(/[^a-z0-9]+/).filter(Boolean);
+  if (!parts.length || (parts.length === 1 && parts[0].length < 2)) return null;
+  // Pluriels et féminins acceptés (retraite -> retraites, condamné -> condamnée) ; l'étoile prend tout début de mot.
+  return new RegExp("(^|[^a-z0-9])" + parts.map(escRe).join("[^a-z0-9]+") + (star ? "" : "(e?s|x|e)?(?=[^a-z0-9]|$)"));
+}
+const splitToks = alt => alt.match(/"[^"]+"|«[^»]+»|[^\s"«»]+/g) || [];
+const unquote = t => t.replace(/^["«]\s*|\s*["»]$/g, "");
+function parseTerms(q) {
+  return String(q || "").split(/[,;\n]+/).map(alt => splitToks(alt).map(t => termRe(unquote(t))).filter(Boolean)).filter(a => a.length);
+}
+const matchAlts = (alts, text) => alts.some(a => a.every(re => re.test(text)));
+// Google cherche aussi dans le corps des articles : on exige au moins la moitié des mots d'un groupe dans le titre.
+const looseAlts = (alts, text) => alts.some(a => a.filter(re => re.test(text)).length >= Math.ceil(a.length / 2));
+function followUrl(s) {
+  const alts = String(s.q || "").split(/[,;\n]+/).map(alt => splitToks(alt).filter(t => !t.endsWith("*"))
+    .map(t => /^["«]/.test(t) ? '"' + unquote(t) + '"' : t).join(" ")).filter(Boolean);
+  if (!alts.length) return "";
+  const q = (alts.length > 1 ? alts.map(a => "(" + a + ")").join(" OR ") : alts[0]) + " when:7d";
+  return "https://news.google.com/rss/search?q=" + encodeURIComponent(q) + "&hl=fr&gl=FR&ceid=FR:fr";
+}
+
+function prepFollow(s) {
+  return Object.assign(s, {items: Array.isArray(s.items) ? s.items : [], alts: parseTerms(s.q),
+    next: 0, busy: false, st: "wait", err: "", at: 0, lastNotif: 0, pend: []});
+}
+function reindexFollows() {
+  followIdx.clear();
+  for (const s of follows) for (const x of s.items) if (!followIdx.has(x.k)) followIdx.set(x.k, {f: s, x});
+}
+function loadFollows() {
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(FOLLOW_KEY) || "null"); } catch (e) {}
+  follows = (data && data.v === 1 && Array.isArray(data.list) ? data.list : []).map(prepFollow);
+  followGone = data && data.gone && typeof data.gone === "object" ? data.gone : {};
+  reindexFollows();
+}
+function saveFollows() {
+  clearTimeout(followSaveTimer); followSaveTimer = null;
+  const out = follows.map(s => ({id: s.id, name: s.name, q: s.q, g: !!s.g, c: s.c, u: s.u || s.c, seen: s.seen, gs: !!s.gs, items: s.items}));
+  const min = Date.now() - 30 * 864e5;
+  for (const id of Object.keys(followGone)) if (followGone[id] < min) delete followGone[id];
+  syncSoon();
+  for (const keep of [FOLLOW_KEEP, 150, 60]) {       // si la mémoire du navigateur est pleine, on garde les plus récents
+    try { localStorage.setItem(FOLLOW_KEY, JSON.stringify({v: 1, gone: followGone, list: out.map(s => ({...s, items: s.items.slice(-keep)}))})); return true; } catch (e) {}
+  }
+  return false;
+}
+const saveFollowsSoon = () => { if (!followSaveTimer) followSaveTimer = setTimeout(saveFollows, 3000); };
+
+function followHas(s, x) {
+  if (s.items.some(o => o.k === x.k || o.l === x.l)) return true;
+  // Même article vu chez le média et chez Google avec un titre à peine différent.
+  const ws = new Set(wordsOf(x.ti)); if (ws.size < 3) return false;
+  const src = norm(x.s);
+  for (const o of s.items) {
+    if (norm(o.s) !== src || Math.abs(o.t - x.t) > 36 * 3600e3) continue;
+    const ow = wordsOf(o.ti); let inter = 0;
+    for (const w of ow) if (ws.has(w)) inter++;
+    if (inter / (ws.size + ow.length - inter) >= 0.7) return true;
+  }
+  return false;
+}
+function addToFollow(s, x, seeding) {
+  if (followHas(s, x)) return false;
+  x.a = seeding ? 0 : Date.now();                    // a > s.seen : nouveau développement pas encore vu
+  s.items.push(x);
+  s.items.sort((a, b) => a.t - b.t);
+  if (s.items.length > FOLLOW_KEEP) { s.items.splice(0, s.items.length - FOLLOW_KEEP); reindexFollows(); }
+  if (!followIdx.has(x.k)) followIdx.set(x.k, {f: s, x});
+  if (!seeding) s.pend.push(x);
+  followsDirty = true;
+  return true;
+}
+const entryOf = (it, v) => ({k: it.id, t: it.t, ti: it.title, s: it.src, l: it.link, v});
+function followCheck(it, seeding) {
+  for (const s of follows) if (s.alts.length && matchAlts(s.alts, it.n)) addToFollow(s, entryOf(it, "fil"), seeding);
+}
+/* Une info majeure dont une dépêche est suivie entre tout entière dans le dossier. */
+function followEvents(evs) {
+  if (!follows.length) return;
+  for (const ev of evs) {
+    const hit = ev.items.map(o => followIdx.get(o.id)).find(Boolean);
+    if (!hit) continue;
+    for (const o of ev.items) if (!followIdx.has(o.id)) addToFollow(hit.f, entryOf(o, "evt"), o.arr <= hit.f.c);
+  }
+  flushFollows();
+}
+const unseenOf = s => s.items.reduce((n, x) => n + (x.a > s.seen ? 1 : 0), 0);
+const unseenTotal = () => follows.reduce((n, s) => n + unseenOf(s), 0);
+
+function flushFollows() {
+  if (followsDirty) { followsDirty = false; saveFollows(); }
+  const hits = follows.filter(s => s.pend.length);
+  if (!hits.length) return;
+  const now = Date.now(), toNotify = [];
+  for (const s of hits) {
+    const list = s.pend.splice(0);
+    // Pas de signal pendant le premier chargement, ni plus d'un toutes les 20 min par sujet.
+    if (!booted || now - s.lastNotif < (CADENCE ? 30e3 : FOLLOW_NOTIF_MS)) continue;
+    if (ui.rub === "Suivis" && ui.suivi === s.id && !document.hidden) continue;
+    s.lastNotif = now;
+    toNotify.push({s, x: list.sort((a, b) => b.t - a.t)[0], n: list.length});
+  }
+  if (toNotify.length) notifyFollows(toNotify);
+  scheduleRender();
+}
+function notifyFollows(list) {
+  if (prefs.sound) beep();
+  const canNotify = prefs.notif && "Notification" in window && Notification.permission === "granted";
+  if (!canNotify || !document.hidden) return;
+  for (const {s, x, n} of list.slice(0, 3)) {
+    try {
+      const note = new Notification(`Le Fil · suivi « ${s.name} »`, {body: x.ti + "\n" + x.s + (n > 1 ? ` (+${n - 1} autre${n > 2 ? "s" : ""})` : ""), tag: "suivi-" + s.id});
+      note.onclick = () => { window.focus(); openDossier(s.id); note.close(); };
+    } catch (e) {}
+  }
+}
+
+async function loadFollow(s) {
+  const url = followUrl(s);
+  if (!url) { s.next = Infinity; return; }
+  s.busy = true; inflight++; setBusy();
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const res = await fetch(RELAIS + encodeURIComponent(url), {cache: "no-store", signal: ctl.signal});
+    if (!res.ok) throw new Error(explain((await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 120)) || "erreur " + res.status);
+    const entries = parse(decode(await res.arrayBuffer(), res.headers.get("content-type")));
+    const now = Date.now(), seeding = !s.gs;         // premier relevé : ce qui existe déjà n'est pas « nouveau »
+    for (const e of entries.slice(0, 80)) {
+      if (!e.title || !/^https?:\/\//i.test(e.link) || !Number.isFinite(e.date) || e.date < now - 8 * 864e5) continue;
+      let title = e.title;
+      if (e.src && title.endsWith(" - " + e.src)) title = title.slice(0, -(e.src.length + 3)).trim();
+      if (!looseAlts(s.alts, norm(title))) continue;
+      addToFollow(s, {k: "t:" + tkey(title), t: Math.min(e.date, now), ti: title, s: e.src || "Google Actualités", l: e.link, v: "g"}, seeding);
+    }
+    s.gs = true; s.st = "ok"; s.err = ""; s.at = now; followsDirty = true;
+  } catch (e) {
+    s.st = "err"; s.err = e.name === "AbortError" ? "délai dépassé" : (e instanceof TypeError ? "relais injoignable" : e.message);
+  } finally {
+    clearTimeout(timer);
+    s.busy = false; inflight--; setBusy();
+    s.next = Date.now() + (CADENCE ? CADENCE * 4e3 : FOLLOW_MS) * (prefs.eco ? 3 : 1) * (s.st === "err" ? 2 : 1);
+    flushFollows(); scheduleRender(); pump();
+  }
+}
+
+function createFollow(name, q, g, seed) {
+  const now = Date.now();
+  const s = prepFollow({id: "s" + now.toString(36) + Math.random().toString(36).slice(2, 5), name, q, g, c: now, u: now, seen: now, gs: false, items: []});
+  follows.unshift(s);
+  for (const it of seed || []) addToFollow(s, entryOf(it, "evt"), true);
+  for (const it of items) if (s.alts.length && matchAlts(s.alts, it.n)) addToFollow(s, entryOf(it, "fil"), true);
+  followsDirty = false; saveFollows();
+  return s;
+}
+function editFollow(s, name, q, g) {
+  const changed = s.q !== q;
+  s.name = name; s.g = g; s.q = q; s.alts = parseTerms(q); s.u = Date.now();
+  if (changed) {                                     // nouveaux mots : on relit la mémoire, sans tout marquer « nouveau »
+    s.gs = false; s.next = 0;
+    for (const it of items) if (s.alts.length && matchAlts(s.alts, it.n)) addToFollow(s, entryOf(it, "fil"), true);
+  }
+  if (g && !s.next) s.next = 0;
+  followsDirty = false; saveFollows();
+}
+function stopFollow(s) {
+  follows = follows.filter(x => x !== s);
+  followGone[s.id] = Date.now();
+  reindexFollows(); saveFollows();
+  if (ui.suivi === s.id) ui.suivi = null;
+}
+/* Mots proposés pour suivre une info majeure : les mots qui la caractérisent le mieux (ceux qui ont servi
+   à la regrouper, pondérés par leur rareté), sous leur forme la plus courante dans les titres. Les noms
+   propres passent devant ; un deuxième, voire un troisième mot n'est ajouté que si le premier seul
+   ramènerait bien plus que l'événement lui-même. */
+function suggestFollow(ev) {
+  const forms = new Map();                           // racine -> forme en minuscules -> [occurrences, en majuscule, forme d'origine]
+  for (const it of ev.items) {
+    const toks = it.title.replace(/[’']/g, " ").split(/\s+/);
+    for (let i = 0; i < toks.length; i++) {
+      const w = toks[i].replace(/^[^\p{L}\d]+|[^\p{L}\d]+$/gu, "");
+      const k = norm(w).split(/[^a-z0-9]+/)[0] || "";
+      if (w.length < 3 || k.length < 3) continue;
+      const st = k.length > 5 ? k.slice(0, 5) : k;
+      if (!(ev.top || ev.sig).includes(st)) continue;
+      const mid = i > 0 && !/[:.!?«"“(]$/.test(toks[i - 1]);
+      let m = forms.get(st); if (!m) forms.set(st, m = new Map());
+      const low = w.toLowerCase(), r = m.get(low) || [0, 0, w];
+      r[0]++; if (mid && /^\p{Lu}/u.test(w)) { r[1]++; r[2] = w; }
+      m.set(low, r);
+    }
+  }
+  const terms = [];
+  for (const st of ev.top || ev.sig) {
+    const m = forms.get(st); if (!m) continue;
+    const [low, [n, maj, orig]] = [...m].sort((a, b) => b[1][0] - a[1][0])[0];
+    if (/^(alerte|urgent|direct|flash)$/.test(low)) continue;
+    terms.push({w: maj * 2 >= n && /^\p{Lu}/u.test(orig) ? orig : low, proper: maj * 2 >= n});
+  }
+  if (!terms.length) return {name: "", q: ""};
+  const lead = terms.slice(0, 3).findIndex(t => t.proper);   // un nom propre parmi les trois mots les plus forts passe devant
+  if (lead > 0) terms.unshift(terms.splice(lead, 1)[0]);
+  let q = terms[0].w;
+  const count = s => { const alts = parseTerms(s); return items.filter(it => !it.spe && matchAlts(alts, it.n)).length; };
+  for (let i = 1; i < Math.min(terms.length, 3) && count(q) > 2 * ev.items.length; i++) q += " " + terms[i].w;
+  return {name: q.charAt(0).toUpperCase() + q.slice(1), q};
+}
+function exportDossier(s) {
+  const lines = [`# ${s.name}`, "", `Mots suivis : ${s.q}`, `Dossier Le Fil, ${s.items.length} article${s.items.length > 1 ? "s" : ""}, exporté le ${fmtFull.format(Date.now())}.`];
+  let day = "";
+  for (const x of s.items.slice().sort((a, b) => a.t - b.t)) {
+    const d = fmtDayLong.format(x.t) + " " + new Date(x.t).getFullYear();
+    if (d !== day) { lines.push("", "## " + d.charAt(0).toUpperCase() + d.slice(1), ""); day = d; }
+    lines.push(`- ${hm(x.t)} · ${x.s} · [${x.ti.replace(/[\[\]]/g, "")}](${x.l})`);
+  }
+  download(lines.join("\n") + "\n", `le-fil-dossier-${slugify(s.name)}-${fmtDay.format(Date.now())}.md`, "text/markdown;charset=utf-8");
+}
+
+/* ---------- Journal des infos majeures (pour Anki) ----------
+   Chaque info majeure retenue est notée au fil de la journée, avec son point de départ et son dernier
+   développement, et gardée 30 jours sur cet appareil : l'export du soir contient aussi celles du matin,
+   même si elles ont quitté le classement depuis. */
+const JOURNAL_KEY = "lefil.journal";
+let journal = [], journalGone = {};          // journalGone : identifiant -> {t, d} des infos écartées (« ignorer ce sujet »)
+try {
+  const j = JSON.parse(localStorage.getItem(JOURNAL_KEY) || "null");
+  if (j && j.v === 1 && Array.isArray(j.list)) { journal = j.list; journalGone = j.gone || {}; }
+} catch (e) {}
+for (const e of journal) if (!e.d) e.d = fmtDay.format(e.first || e.last || Date.now());   // journée de rattachement, fixe
+let journalTimer = null;
+function saveJournal(now) {
+  clearTimeout(journalTimer);
+  const write = () => {
+    const min = Date.now() - 30 * 864e5;
+    journal = journal.filter(e => e.last >= min).slice(-600);
+    for (const id of Object.keys(journalGone)) if (journalGone[id].t < min) delete journalGone[id];
+    try { localStorage.setItem(JOURNAL_KEY, JSON.stringify({v: 1, list: journal, gone: journalGone})); } catch (e) {}
+    syncSoon();
+  };
+  if (now) write(); else journalTimer = setTimeout(write, 1500);
+}
+const snap = it => ({t: it.t, ti: it.title, s: it.src, l: it.link});
+/* Fusion d'une info majeure notée par deux passages ou deux appareils. Tout est monotone (le départ le plus
+   ancien, le développement le plus récent, l'union des médias), pour que deux appareils aboutissent au même
+   résultat quel que soit l'ordre. */
+function mergeEntry(e, c) {
+  if (c.o && (!e.o || c.o.t < e.o.t || (c.o.t === e.o.t && c.o.l < e.o.l))) e.o = {t: c.o.t, ti: c.o.ti, s: c.o.s, l: c.o.l};
+  // La fiche (titre, faits, qui…) et le « pourquoi » accompagnent le dernier développement ; à égalité, même choix partout.
+  if (c.r && (!e.r || c.r.t > e.r.t || (c.r.t === e.r.t && c.r.l > e.r.l))) { e.r = {t: c.r.t, ti: c.r.ti, s: c.r.s, l: c.r.l}; e.why = c.why || []; if (c.fiche) e.fiche = c.fiche; }
+  else if (c.r && e.r && c.r.l === e.r.l && JSON.stringify([c.why || [], c.fiche || null]) > JSON.stringify([e.why || [], e.fiche || null])) { e.why = c.why || []; if (c.fiche) e.fiche = c.fiche; }
+  e.first = Math.min(e.first ?? Infinity, c.first ?? Infinity);
+  e.last = Math.max(e.last || 0, c.last || 0);
+  e.media = [...new Set([...(e.media || []), ...(c.media || [])])].sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+  e.n = e.media.length;
+  e.ks = [...new Set([...(e.ks || []), ...(c.ks || [])])].sort().slice(0, 60);
+  if (!e.d) e.d = c.d || fmtDay.format(e.first);
+  return e;
+}
+const canonEntry = e => ({id: e.id, d: e.d, first: e.first, last: e.last, o: e.o, r: e.r, media: e.media || [], why: e.why || [], ks: e.ks || [], fiche: e.fiche || null});
+function journalize(evs) {
+  if (!evs.length) return;
+  const now = Date.now(), recent = journal.filter(e => now - e.last < 3 * 864e5);
+  let dirty = false;
+  for (const ev of evs) {
+    const ks = ev.items.map(i => hashStr(i.id)), set = new Set(ks);
+    let e = recent.find(j => j.ks.some(k => set.has(k)));
+    const o = ev.origin || ev.rep, r = ev.rep;
+    if (!e) { e = {id: hashStr(o.id + o.t), d: fmtDay.format(ev.first), ks: []}; journal.push(e); recent.push(e); }
+    const before = JSON.stringify(canonEntry(e));
+    let fiche = null;
+    try { fiche = buildFiche(ev); } catch (err) {}
+    mergeEntry(e, {first: ev.first, last: ev.last, o: snap(o), r: snap(r), media: [...ev.media], why: ev.why, ks, fiche});
+    if (JSON.stringify(canonEntry(e)) !== before) dirty = true;
+  }
+  if (dirty) saveJournal();
+}
+function journalForget(ev) {
+  const set = new Set(ev.items.map(i => hashStr(i.id))), now = Date.now();
+  for (const j of journal) if (j.ks.some(k => set.has(k))) journalGone[j.id] = {t: now, d: j.d};
+  journal = journal.filter(j => !journalGone[j.id]);
+  saveJournal();
+}
+function ankiEntries(range) {                       // 0 : aujourd'hui, 1 : hier, 7 : 7 derniers jours
+  const now = Date.now();
+  const days = new Set(range === 7 ? [0, 1, 2, 3, 4, 5, 6].map(i => fmtDay.format(now - i * 864e5)) : [fmtDay.format(now - range * 864e5)]);
+  return journal.filter(e => {
+    for (let t = e.first; t < e.last; t += 6 * 3600e3) if (days.has(fmtDay.format(t))) return true;
+    return days.has(fmtDay.format(e.last));
+  }).sort((a, b) => a.first - b.first);
+}
+/* Fiche d'une entrée du journal : celle calculée pendant l'analyse, ou, pour les infos notées par une
+   version précédente de Le Fil, une fiche réduite tirée du départ et du dernier développement. */
+function ficheOf(e) {
+  if (e.fiche) return e.fiche;
+  const faits = [{s: cleanHeadline(e.o.ti), src: e.o.s, t: e.o.t, l: e.o.l}];
+  if (e.r.l !== e.o.l) faits.push({s: cleanHeadline(e.r.ti), src: e.r.s, t: e.r.t, l: e.r.l});
+  return {titre: headlineLabel(cleanHeadline(e.o.ti)) || cleanHeadline(e.o.ti), faits, qui: namesOf([e.o.ti, e.r.ti]).map(x => x.name),
+    gravite: [], contexte: null, signes: null, chiffres: figuresOf(faits.map((x, i) => ({s: x.s, src: x.src, item: i})))};
+}
+function exportAnki(range) {
+  const list = ankiEntries(range);
+  if (!list.length) return 0;
+  const clean = s => esc(String(s || "").replace(/[\t\r\n]+/g, " "));
+  const field = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const a = (l, txt) => l ? `<a href='${esc(l)}'>${clean(txt)}</a>` : clean(txt);
+  const year = t => new Date(t).getFullYear();
+  const rows = list.map(e => {
+    const f = ficheOf(e);
+    const first = Number.isFinite(e.first) ? e.first : e.o.t;
+    const sameDay = fmtDay.format(first) === fmtDay.format(e.last || first);
+    const date = sameDay ? `${fmtDayLong.format(first)} ${year(first)}, premiers articles à ${hm(first)}`
+      : `du ${fmtDayLong.format(first)} au ${fmtDayLong.format(e.last)} ${year(e.last)}`;
+    const when = t => fmtDay.format(t) === fmtDay.format(first) ? hm(t) : `${fmtDayLong.format(t)} à ${hm(t)}`;
+    const faits = f.faits.map(x => `<li>${clean(x.s)} <i>(${a(x.l, x.src)}${x.chapo ? "" : ", " + when(x.t)})</i></li>`).join("");
+    const sg = f.signes;
+    const ampleur = [`repris par ${e.n} média${e.n > 1 ? "s" : ""}` + (sg && sg.peak >= 3 ? `, dont ${sg.peak} en moins de 3 h` : ""),
+      sg && sg.une ? `${sg.une === 1 ? "1er" : sg.une + "e"} sujet à la une de Google Actualités` : "",
+      sg && sg.urgent ? "titré ALERTE ou URGENT" : ""].filter(Boolean).join(" ; ");
+    const chiffres = (f.chiffres || []).map(c => {
+      const at = c.clause.indexOf(c.fig);
+      const body = at >= 0 ? clean(c.clause.slice(0, at)) + "<b>" + clean(c.fig) + "</b>" + clean(c.clause.slice(at + c.fig.length)) : `<b>${clean(c.fig)}</b> : ${clean(c.clause)}`;
+      return `<li>${body} <i>(${clean(c.src)})</i></li>`;
+    }).join("");
+    const enjeu = [`<li>Ampleur : ${clean(ampleur)}</li>`,
+      f.gravite && f.gravite.length ? `<li>Mots forts des titres : ${f.gravite.map(w => "« " + clean(w) + " »").join(", ")}</li>` : "",
+      f.contexte ? `<li>Contexte : « ${clean(f.contexte.s)} » <i>(${clean(f.contexte.src)})</i></li>` : ""].join("");
+    const recto = clean(f.titre);
+    const verso = `<b>Date</b> : ${clean(date)}`
+      + `<br><br><b>Les faits</b><ul>${faits}</ul>`
+      + (chiffres ? `<b>Les chiffres</b><ul>${chiffres}</ul>` : "")
+      + (f.qui && f.qui.length ? `<b>Qui</b> : ${clean(f.qui.join(", "))}<br><br>` : "")
+      + `<b>Repères pour ton analyse</b><ul>${enjeu}</ul>`;
+    const tags = `le-fil info-majeure ${e.d || fmtDay.format(first)}`;
+    // « lefil2- » : nouveau type de note ; les cartes de l'ancien format (Basique) ne peuvent pas être converties.
+    return [recto, verso, tags, "lefil2-" + e.id].map(field).join("\t");
+  });
+  // Pas d'en-tête « #columns » : Anki rangerait alors les colonnes selon les noms de champs de sa langue
+  // (Front/Back ou Recto/Verso) et pourrait laisser le verso vide. Vérifié avec Anki 26.09 : colonne 1 au
+  // recto, 2 au verso ; un second import met à jour les cartes (même GUID) au lieu de les dupliquer.
+  // Type de note « Le Fil » (Titre, Réponse, Importance) et paquet « Le Fil », installés une fois avec le modèle.
+  // Le champ Importance n'est jamais rempli par l'import : ce que tu y écris reste (vérifié avec Anki 26.09).
+  const head = ["#separator:tab", "#html:true", "#notetype:Le Fil", "#deck:Le Fil", "#tags column:3", "#guid column:4"];
+  const label = range === 7 ? "7-jours" : fmtDay.format(Date.now() - range * 864e5);
+  download(head.concat(rows).join("\n") + "\n", `le-fil-anki-${label}.txt`, "text/plain;charset=utf-8");
+  return list.length;
+}
+
+/* ---------- Synchronisation entre appareils ----------
+   Facultative : active quand cet appareil connaît la clé et qu'une base D1 est reliée au relais.
+   Documents partagés : « prefs » (réglages communs), « suivi:<id> » (un par sujet suivi, ou sa marque
+   d'arrêt), « vus » (ce qui a été lu dans chaque dossier), « journal:<jour> » (infos majeures du jour).
+   Chaque document est comparé sous une forme canonique : seul ce qui diffère de la dernière version
+   connue du relais est envoyé. Les fusions n'enlèvent rien et donnent le même résultat sur chaque
+   appareil, quel que soit l'ordre des échanges ; pour un réglage, un nom ou des mots de suivi, la
+   modification la plus récente l'emporte. Le fil lui-même n'est pas partagé. */
+const SYNC_EVERY = CADENCE ? 4e3 : 120e3, SYNC_GAP = CADENCE ? 1500 : 45e3;
+const itemOrder = (a, b) => a.t - b.t || (a.k < b.k ? -1 : a.k > b.k ? 1 : 0);
+const canonItem = x => ({k: x.k, t: x.t, ti: x.ti, s: x.s, l: x.l, v: x.v || "fil", a: x.a || 0});
+const canonPrefs = d => JSON.stringify({u: d.u || 0, muted: [...(d.muted || [])].sort(), alerts: d.alerts ?? "", maj: d.maj !== false,
+  majMin: d.majMin || 6, majCap: d.majCap || 10, fr: !!d.fr,
+  ignSig: (d.ignSig || []).map(x => ({w: x.w, at: x.at})).sort((a, b) => a.at - b.at || (a.w.join() < b.w.join() ? -1 : 1))});
+const canonFollow = f => f.del ? JSON.stringify({id: f.id, del: true, u: f.u || 0})
+  : JSON.stringify({id: f.id, name: f.name, q: f.q, g: !!f.g, c: f.c || 0, u: f.u || f.c || 0, gs: !!f.gs, items: (f.items || []).map(canonItem).sort(itemOrder)});
+const canonVus = map => JSON.stringify(Object.fromEntries(Object.entries(map).sort()));
+const localVus = () => Object.fromEntries(follows.map(f => [f.id, f.seen || 0]));
+const canonDay = (d, entries, gone) => JSON.stringify({d, entries: entries.map(canonEntry).sort((a, b) => a.id < b.id ? -1 : 1),
+  gone: gone.map(g => [g[0], g[1]]).sort((a, b) => a[0] < b[0] ? -1 : 1)});
+const localDay = d => canonDay(d, journal.filter(e => e.d === d), Object.entries(journalGone).filter(([, g]) => g.d === d).map(([id, g]) => [id, g.t]));
+const recentDay = d => d >= fmtDay.format(Date.now() - 30 * 864e5);
+
+function saveSyncState() {
+  try { localStorage.setItem(SYNC_LS, JSON.stringify({cle: syncSt.cle, since: syncSt.since, revs: syncSt.revs, hash: syncSt.hash})); } catch (e) {}
+}
+function localDocs() {
+  const docs = [{k: "prefs", v: canonPrefs(prefs)}, {k: "vus", v: canonVus(localVus())}];
+  for (const f of follows) docs.push({k: "suivi:" + f.id, v: canonFollow(f)});
+  for (const [id, t] of Object.entries(followGone)) if (!follows.some(f => f.id === id)) docs.push({k: "suivi:" + id, v: canonFollow({id, del: true, u: t})});
+  const days = new Set([...journal.map(e => e.d), ...Object.values(journalGone).map(g => g.d)]);
+  for (const d of days) if (d && recentDay(d)) docs.push({k: "journal:" + d, v: localDay(d)});
+  return docs.filter(x => hashStr(x.v) !== syncSt.hash[x.k]);
+}
+
+function mergePrefs(d) {
+  const before = {alerts: prefs.alerts, maj: [prefs.maj, prefs.majMin, prefs.majCap].join(), ign: JSON.stringify(prefs.ignSig || []), other: JSON.stringify([prefs.muted, prefs.fr])};
+  const lu = prefs.u || 0, ru = d.u || 0;
+  const mine = JSON.stringify(SHARED_PREFS.map(f => prefs[f])), theirs = JSON.stringify(SHARED_PREFS.map(f => d[f]));
+  // La modification la plus récente l'emporte. Un appareil qui vient d'activer la synchro (lu = 0) prend les
+  // réglages déjà partagés : c'est le premier appareil activé qui donne le ton.
+  if (ru > lu || lu === 0 || (ru === lu && theirs > mine)) {
+    for (const f of SHARED_PREFS) if (d[f] !== undefined) prefs[f] = d[f];
+    prefs.u = ru;
+  }
+  const ign = new Map();                              // sujets ignorés : on garde ceux des deux appareils
+  for (const x of [...(prefs.ignSig || []), ...(d.ignSig || [])]) {
+    const k = x.w.join(",");
+    if (!ign.has(k) || ign.get(k).at < x.at) ign.set(k, {w: x.w, at: x.at});
+  }
+  prefs.ignSig = [...ign.values()].filter(x => Date.now() - x.at < 7 * 864e5).sort((a, b) => a.at - b.at).slice(-100);
+  lastPrefSig = sharedSig();
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {}
+  const majChanged = before.maj !== [prefs.maj, prefs.majMin, prefs.majCap].join();
+  if (before.alerts !== prefs.alerts) compileAlerts();
+  if (majChanged) { if (!prefs.maj && ui.rub === "Majeures") ui.rub = "Tout"; resetMajors(); }
+  else if (before.ign !== JSON.stringify(prefs.ignSig)) analyze();
+  if (before.other !== JSON.stringify([prefs.muted, prefs.fr])) { renderSources(); pump(); }
+}
+function mergeFollowItems(f, list) {
+  const byK = new Map(f.items.map(x => [x.k, x]));
+  for (const x of list || []) {
+    const o = byK.get(x.k), y = canonItem(x);
+    if (!o) { byK.set(x.k, y); continue; }
+    // Même clé, versions différentes (flux du média ou Google) : même choix sur chaque appareil.
+    const a = Math.min(o.a || 0, y.a || 0);
+    if (JSON.stringify({...canonItem(o), a: 0}) > JSON.stringify({...y, a: 0})) Object.assign(o, y);
+    o.a = a;
+  }
+  f.items = [...byK.values()].sort(itemOrder).slice(-FOLLOW_KEEP);
+}
+function mergeFollow(d) {
+  const id = d.id; if (!id) return;
+  let f = follows.find(x => x.id === id);
+  const du = d.u || d.c || 0, fu = f ? f.u || f.c || 0 : 0;
+  if (d.del) {
+    followGone[id] = Math.max(followGone[id] || 0, du);
+    if (f && fu <= du) { follows = follows.filter(x => x !== f); if (ui.suivi === id) ui.suivi = null; }
+    return;
+  }
+  if (followGone[id] && followGone[id] >= du) return;        // arrêté ici plus récemment : l'arrêt sera renvoyé
+  if (!f) {
+    if (follows.length >= FOLLOW_MAX * 2) return;
+    f = prepFollow({id, name: d.name, q: d.q, g: !!d.g, c: d.c, u: du, seen: 0, gs: !!d.gs, items: []});
+    follows.push(f);
+  } else if (du > fu || (du === fu && JSON.stringify([d.name, d.q, !!d.g]) > JSON.stringify([f.name, f.q, !!f.g]))) {
+    f.name = d.name; f.q = d.q; f.g = !!d.g; f.u = du; f.alts = parseTerms(f.q); f.next = 0;
+  }
+  f.gs = f.gs || !!d.gs;
+  mergeFollowItems(f, d.items);
+}
+function mergeJournalDay(doc) {
+  const d = doc.d;
+  for (const [id, t] of doc.gone || []) if (!journalGone[id] || journalGone[id].t < t) journalGone[id] = {t, d};
+  const byId = new Map(journal.map(e => [e.id, e]));
+  for (const x of doc.entries || []) {
+    const e = byId.get(x.id);
+    if (e) mergeEntry(e, x); else byId.set(x.id, mergeEntry({id: x.id, d: x.d || d}, x));
+  }
+  // Même événement noté sous deux identifiants (un par appareil) : réuni sous le plus petit, partout pareil.
+  const list = [...byId.values()].filter(e => !journalGone[e.id]).sort((a, b) => a.id < b.id ? -1 : 1);
+  const owner = new Map(), out = [];
+  for (const e of list) {
+    let dup = null;
+    for (const k of e.ks || []) { const o = owner.get(k); if (o) { dup = o; break; } }
+    if (dup) mergeEntry(dup, e); else { out.push(e); dup = e; }
+    for (const k of dup.ks) owner.set(k, dup);
+  }
+  journal = out.sort((a, b) => (a.first || 0) - (b.first || 0));
+}
+function applyDocs(rows) {
+  syncSt.applying = true;
+  try { applyDocsInner(rows); } finally { syncSt.applying = false; }
+}
+function applyDocsInner(rows) {
+  const parsed = [];
+  for (const row of rows) { try { parsed.push({k: row.k, rev: row.rev, d: JSON.parse(row.v)}); } catch (e) {} }
+  let fol = false, jour = false, pre = false;
+  // Les sujets d'abord, puis ce qui a été lu, qui s'y rapporte.
+  const rank = k => k === "prefs" ? 0 : k.startsWith("suivi:") ? 1 : k === "vus" ? 2 : 3;
+  parsed.sort((a, b) => rank(a.k) - rank(b.k) || a.rev - b.rev);
+  for (const {k, rev, d} of parsed) {
+    if (k === "prefs") { mergePrefs(d); syncSt.hash[k] = hashStr(canonPrefs(d)); pre = true; }
+    else if (k.startsWith("suivi:")) { mergeFollow(d); syncSt.hash[k] = hashStr(canonFollow(d)); fol = true; }
+    else if (k === "vus") {
+      for (const f of follows) if (d[f.id] > (f.seen || 0)) f.seen = d[f.id];
+      syncSt.hash[k] = hashStr(canonVus(Object.fromEntries(follows.map(f => [f.id, d[f.id] || 0])))); fol = true;
+    }
+    else if (k.startsWith("journal:")) {
+      if (!recentDay(d.d || "")) continue;
+      mergeJournalDay(d); syncSt.hash[k] = hashStr(canonDay(d.d, d.entries || [], d.gone || [])); jour = true;
+    }
+    else continue;
+    if (rev) syncSt.revs[k] = rev;
+  }
+  if (fol) { reindexFollows(); followsDirty = false; saveFollows(); }
+  if (jour) saveJournal(true);
+  if (fol || jour || pre) scheduleRender();
+}
+
+async function syncCall(method, body) {
+  const res = await fetch("/sync" + (method === "GET" ? "?depuis=" + syncSt.since : ""), {method, cache: "no-store",
+    headers: {"x-lefil-cle": syncSt.cle, ...(body ? {"content-type": "application/json"} : {})}, body: body ? JSON.stringify(body) : undefined});
+  if (!res.ok) {
+    const msg = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 160);
+    throw new Error(res.status === 401 ? "clé refusée : vérifie-la dans Sources" : res.status === 404 ? "le relais n'a pas encore la version 15" : msg || "erreur " + res.status);
+  }
+  return res.json();
+}
+async function syncPush() {                          // renvoie vrai s'il faut recommencer (conflit fusionné)
+  const docs = localDocs();
+  if (!docs.length) return false;
+  const res = await syncCall("POST", {docs: docs.map(x => ({k: x.k, v: x.v, base: syncSt.revs[x.k] || 0}))});
+  const sent = new Map(docs.map(x => [x.k, x.v]));
+  let conflict = false;
+  for (const r of (res.docs || []).slice().sort((a, b) => (a.rev || 0) - (b.rev || 0))) {
+    if (r.ok) {
+      syncSt.hash[r.k] = hashStr(sent.get(r.k)); syncSt.revs[r.k] = r.rev;
+      if (r.rev === syncSt.since + 1) syncSt.since = r.rev;      // aucune écriture d'un autre appareil entre-temps
+    } else if (r.v) { applyDocs([{k: r.k, v: r.v, rev: r.rev}]); conflict = true; }
+  }
+  return conflict;
+}
+async function syncNow() {
+  if (!syncSt.cle) return;
+  if (syncSt.busy) { syncSt.again = true; return; }
+  clearTimeout(syncSt.timer); syncSt.timer = null;
+  syncSt.busy = true; syncSt.last = Date.now();
+  try {
+    const data = await syncCall("GET");
+    if ((data.rev || 0) < syncSt.since) { syncSt.since = 0; syncSt.revs = {}; syncSt.hash = {}; return syncAgain(); }   // base recréée : tout reprendre
+    applyDocs(data.docs || []);
+    syncSt.since = Math.max(syncSt.since, ...(data.docs || []).map(r => r.rev || 0));
+    for (let i = 0; i < 3 && await syncPush(); i++) {}
+    syncSt.st = "ok"; syncSt.err = ""; syncSt.at = Date.now();
+  } catch (e) {
+    syncSt.st = "err"; syncSt.err = e instanceof TypeError ? "relais injoignable" : e.message;
+  } finally {
+    syncSt.busy = false; saveSyncState(); renderSyncUI(); updateStatus();
+    if (syncSt.again) { syncSt.again = false; syncSoon(); }
+  }
+}
+function syncAgain() { syncSt.again = true; }
+/* Après une modification : envoi groupé, au plus une fois toutes les 45 s. */
+function syncSoon() {
+  if (!syncSt.cle || syncSt.timer || syncSt.applying) return;
+  syncSt.timer = setTimeout(() => { syncSt.timer = null; syncNow(); }, Math.max(CADENCE ? 300 : 8000, SYNC_GAP - (Date.now() - syncSt.last)));
+}
+function activateSync(cle) {
+  Object.assign(syncSt, {cle, since: 0, revs: {}, hash: {}, st: "wait", err: "", at: 0});
+  prefs.u = 0;                                        // les réglages déjà partagés l'emportent sur ceux de cet appareil
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {}
+  saveSyncState(); renderSyncUI(); syncNow();
+}
+function stopSync() {
+  Object.assign(syncSt, {cle: "", since: 0, revs: {}, hash: {}, st: "wait", err: "", at: 0});
+  clearTimeout(syncSt.timer); syncSt.timer = null;
+  try { localStorage.removeItem(SYNC_LS); } catch (e) {}
+  renderSyncUI(); updateStatus();
+}
+function renderSyncUI() {
+  const st = $("#sync-state"); if (!st) return;
+  const on = !!syncSt.cle;
+  $("#sync-off").hidden = on; $("#sync-live").hidden = !on;
+  st.textContent = !on
+    ? "Pas activée sur cet appareil. Ouvre une fois ton lien personnel ici, ou colle ta clé ci-dessous. Sur iPhone, l'icône Le Fil de l'écran d'accueil ne partage pas la mémoire de Safari : colle la clé depuis l'icône."
+    : syncSt.st === "err" ? `Active, mais le dernier échange a échoué : ${syncSt.err}. Le Fil réessaie tout seul.`
+    : syncSt.at ? `Active. Réglages communs, sujets suivis (et ce que tu y as lu) et journal des infos majeures sont partagés avec tes autres appareils. Dernier échange à ${hm(syncSt.at)}.`
+    : "Active. Premier échange en cours…";
+}
+
+/* ---------- Affichage ---------- */
+const passesPrefs = it => !isMutedName(it.src) && (!prefs.fr || it.lang === "fr");
+function baseMatch(it, now) {
+  if (!passesPrefs(it) || it.held) return false;
+  if (it.t < now - prefs.hours * 3600e3) return false;
+  if (ui.q.length) {
+    const hay = it.n + " " + norm(it.src) + " " + norm(it.rub);
+    for (const w of ui.q) if (!hay.includes(w)) return false;
+  }
+  return true;
+}
+const rubMatch = it => ui.rub === "Cyclisme" ? it.cyc
+  : !it.spe && (ui.rub === "Tout" || (ui.rub === "Majeures" ? !!(it.maj && it.maj.rep) : ui.rub === "Alertes" ? !!it.al : it.rub === ui.rub));
+
+function scheduleRender(now) {
+  if (ui.renderQueued) return;
+  ui.renderQueued = true;
+  const wait = now ? 0 : Math.max(0, 400 - (Date.now() - ui.lastRender));
+  setTimeout(() => requestAnimationFrame(() => { ui.renderQueued = false; ui.lastRender = Date.now(); render(); }), wait);
+}
+
+const dayShort = t => fmtDay.format(t) === fmtDay.format(Date.now()) ? "" : (fmtDay.format(t) === fmtDay.format(Date.now() - 864e5) ? "hier " : fmtDayLong.format(t) + " ");
+function dayLabel(t) {
+  const k = fmtDay.format(t), today = fmtDay.format(Date.now()), yest = fmtDay.format(Date.now() - 864e5);
+  const long = fmtDayLong.format(t);
+  return k === today ? "Aujourd'hui · " + long : k === yest ? "Hier · " + long : long;
+}
+
+function render() {
+  const now = Date.now();
+  const pool = items.filter(it => baseMatch(it, now));
+  const counts = {Tout: 0, Alertes: 0, Majeures: 0, Cyclisme: 0, Suivis: unseenTotal()};
+  for (const it of pool) {
+    if (it.cyc) counts.Cyclisme++;
+    if (it.spe) continue;
+    counts.Tout++;
+    counts[it.rub] = (counts[it.rub] || 0) + 1; if (it.al) counts.Alertes++; if (it.maj && it.maj.rep) counts.Majeures++;
+  }
+  renderChips(counts);
+  renderViewbar();
+  if (ui.rub === "Suivis") { renderFollows(now); updateStatus(counts.Tout); return; }
+
+  // Tri strictement chronologique, à la seconde près quand le flux la donne.
+  const minute = it => Math.floor(it.t / 60e3);
+  const list = pool.filter(rubMatch).sort((a, b) => b.t - a.t || (a.id < b.id ? -1 : 1));
+  const shown = list.slice(0, ui.limit);
+  const flagged = it => (it.maj && it.maj.rep) || it.al;
+  let html = "", lastDay = "";
+  const dayHead = t => { const day = fmtDay.format(t); if (day !== lastDay) { html += `<h3 class="day">${esc(dayLabel(t))}</h3>`; lastDay = day; } };
+  const row = it => {
+    let html = "";
+    const isNew = it.fresh && now - it.arr < FRESH_MARK;
+    const flash = it.fresh && !it.flashed; it.flashed = true;
+    const mj = it.maj, head = mj && mj.rep, ev = mj && mj.ev;
+    const story = head && ev.origin && ev.origin !== it;          // événement qui a évolué depuis son point de départ
+    const main = story ? ev.origin : it;
+    const svx = head ? ev.items.map(o => followIdx.get(o.id)).find(Boolean) : followIdx.get(it.id);
+    const sv = svx && svx.f, svNew = !!(svx && svx.x && svx.x.a > svx.f.seen);
+    html += `<article class="d${isNew ? " nw" : ""}${head ? " mj" : it.al ? " al" : ""}${flash ? " in" : ""}">`
+      + `<time datetime="${new Date(it.t).toISOString()}" title="${esc(fmtFull.format(it.t))}${it.dated ? "" : " (heure de réception)"}${it.bulk ? " (heure d'une mise à jour groupée du site)" : ""}">${it.dated && !it.bulk ? "" : "≈"}${hm(it.t)}</time>`
+      + `<div><div class="meta">`
+      + (story ? "" : `<span class="src">${esc(it.src)}</span><span>${esc(it.rub)}</span>`)
+      + (story ? "" : it.spe && SRC_PAYS.get(it.src) ? `<span>${SRC_PAYS.get(it.src)}</span>` : it.lang !== "fr" ? `<span>${it.lang.toUpperCase()}</span>` : "")
+      + (head ? `<span class="tg hot">${mj.urgent ? "Urgent" : "Info majeure"} · ${mj.n >= 2 ? mj.n + " médias" : "à la une"}</span>` : "")
+      + (sv ? `<span class="tg ${svNew ? "svn" : "svt"}">Suivi · ${esc(sv.name)}${svNew ? " · nouveau" : ""}</span>` : "")
+      + (head && !sv ? `<button type="button" class="ig fw" data-id="${esc(it.id)}">suivre ce sujet</button>` : "")
+      + (head ? `<button type="button" class="ig" data-id="${esc(it.id)}">ignorer ce sujet</button>` : "")
+      + (mj && !head ? `<span class="tg hotl">Info majeure, suite</span>` : "")
+      + (isNew ? `<span class="tg nwt">Nouveau</span>` : "")
+      + (it.al ? `<span class="tg alt">Alerte · ${esc(it.al)}</span>` : "")
+      + `</div>`
+      + (story ? `<div class="lbl">Au départ · ${esc(dayShort(main.t))}${hm(main.t)} · ${esc(main.src)}</div>` : "")
+      + `<h2><a href="${esc(main.link)}" target="_blank" rel="noopener noreferrer">${esc(main.title)}</a></h2>`
+      + (!story && it.sum ? `<p>${esc(it.sum)}</p>` : "")
+      + (story ? `<div class="latest"><div class="lbl">Dernier développement · ${hm(it.t)} · ${esc(it.src)}</div>`
+          + `<a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a></div>` : "")
+      + (head ? `<details class="also"><summary>${esc(ev.why.join(" · "))}${ev.media.size > 1 ? ` · repris par ${esc([...ev.media].filter(m => m !== it.src).join(", "))}` : ""} · chronologie</summary><ol class="chrono">`
+          + ev.items.slice().sort((a, b) => a.t - b.t).map(o => `<li><time>${esc(dayShort(o.t))}${o.bulk ? "≈" : ""}${hm(o.t)}</time> <b>${esc(o.src)}</b> <a href="${esc(o.link)}" target="_blank" rel="noopener noreferrer">${esc(o.title)}</a></li>`).join("")
+          + ev.uneList.filter(c => !ev.items.some(o => tkey(o.title) === tkey(c.title))).map(c => `<li><time>·</time> <b>${esc(c.src)}</b> <a href="${esc(c.link)}" target="_blank" rel="noopener noreferrer">${esc(c.title)}</a></li>`).join("")
+          + `</ol></details>` : "")
+      + `</div></article>`;
+    return html;
+  };
+  const lotRow = lot => {
+    const it = lot[0];
+    lot.forEach(o => { o.flashed = true; });
+    return `<article class="d lot"><time datetime="${new Date(it.t).toISOString()}">${hm(it.t)}</time><div>`
+      + `<div class="meta"><span class="src">${esc(it.src)}</span><span>${lot.length} articles</span></div>`
+      + `<details class="also"><summary>Datés de la même minute par le site, souvent lors d'une mise à jour groupée : l'heure réelle peut être antérieure</summary><ul>`
+      + lot.map(o => `<li><b>${esc(o.rub)}</b> <a href="${esc(o.link)}" target="_blank" rel="noopener noreferrer">${esc(o.title)}</a></li>`).join("")
+      + `</ul></details></div></article>`;
+  };
+  // Articles datés en lot dont la vraie heure n'a pas (encore) été retrouvée : repliés en une ligne,
+  // placée à leur heure commune. Une dépêche signalée ou toute nouvelle reste toujours visible.
+  const lots = new Map();
+  for (const o of shown) if (o.bulk && !flagged(o) && !o.fresh) {
+    const k = o.src + "|" + minute(o);
+    if (!lots.has(k)) lots.set(k, []);
+    lots.get(k).push(o);
+  }
+  const done = new Set();
+  for (const it of shown) {
+    if (done.has(it)) continue;
+    const lot = it.bulk ? lots.get(it.src + "|" + minute(it)) : null;
+    dayHead(it.t);
+    if (lot && lot.length >= 4 && lot.includes(it)) {
+      html += lotRow(lot);
+      lot.forEach(o => done.add(o));
+    } else {
+      html += row(it);
+    }
+  }
+  if (!shown.length) {
+    const loading = feeds.some(f => f.st === "wait" && !isMutedName(f.n));
+    html = `<p class="empty">${loading
+      ? "Premier relevé des flux en cours. Les dépêches arrivent au fil de l'eau."
+      : "Aucune dépêche ne correspond. Élargis la période, change de rubrique ou retire un mot du filtre."}</p>`;
+  }
+  $("#list").innerHTML = html;
+  const more = $("#more");
+  more.hidden = list.length <= ui.limit;
+  more.textContent = `Afficher ${Math.min(PAGE, list.length - ui.limit)} dépêches de plus (${list.length - ui.limit} restantes)`;
+  updateStatus(counts.Tout);
+}
+
+/* Bandeau propre à la vue : export Anki, présentation du cyclisme, création d'un suivi. Reconstruit
+   seulement quand la vue change, pour ne pas réinitialiser le choix de période pendant qu'on l'utilise. */
+function renderViewbar() {
+  const vb = $("#viewbar");
+  const key = ui.rub + "|" + (ui.rub === "Suivis" ? ui.suivi || "" : "") + "|" + prefs.fr;
+  if (key !== ui.viewKey) {
+    ui.viewKey = key;
+    let html = "";
+    if (ui.rub === "Majeures") html = `<p><b>Réviser dans Anki.</b> Un fichier de cartes : un titre au recto ; au verso, la date, les faits, les chiffres, qui, et des repères pour écrire toi-même en quoi c'est important (champ « Importance » de la carte, jamais écrasé par un nouvel import). Première fois : importe dans Anki le <a href="/le-fil-modele.apkg" download>modèle Le Fil</a>, qui crée le type de carte et le paquet. Chaque info majeure est notée au fil de la journée et gardée 30 jours sur cet appareil.</p>`
+      + `<div class="actions"><select class="btn" id="anki-range" aria-label="Période à exporter"><option value="0">Aujourd'hui</option><option value="1">Hier</option><option value="7">7 derniers jours</option></select>`
+      + `<button class="btn primary" type="button" id="anki-go">Exporter vers Anki</button><span class="note" id="anki-note"></span></div>`;
+    else if (ui.rub === "Cyclisme") html = `<p><b>Cyclisme.</b> La presse vélo belge, néerlandaise, italienne, anglophone et française, plus les articles vélo des médias généralistes. Ces sources spécialisées n'apparaissent qu'ici et ne comptent pas dans les infos majeures.`
+      + (prefs.fr ? " Attention : « Médias en français uniquement » est coché dans Sources, les titres étrangers sont masqués." : "") + `</p>`;
+    else if (ui.rub === "Suivis" && !ui.suivi) html = `<p><b>Sujets suivis.</b> Chaque sujet est un dossier qui se remplit seul : les dépêches qui citent ses mots, gardées au-delà de 48 h, et en option une recherche Google Actualités sur 7 jours. Le Fil signale chaque nouveau développement. Pour suivre une info majeure, touche « suivre ce sujet » sous son titre.</p>`
+      + `<div class="actions"><button class="btn primary" type="button" id="suivi-new">Nouveau sujet</button></div>`;
+    vb.innerHTML = html; vb.hidden = !html;
+  }
+  const note = $("#anki-note");
+  if (note) {
+    const n = ankiEntries(Number($("#anki-range").value)).length;
+    note.textContent = n ? `${n} carte${n > 1 ? "s" : ""}` : "aucune info majeure notée sur cette période";
+  }
+}
+
+function renderFollows(now) {
+  const list = $("#list");
+  $("#more").hidden = true;
+  const s = ui.suivi && follows.find(x => x.id === ui.suivi);
+  if (ui.suivi && !s) { ui.suivi = null; renderViewbar(); }
+  const gState = f => !f.g ? "sans recherche Google" : f.st === "err" ? "recherche Google en échec : " + f.err : f.at ? "Google relu à " + hm(f.at) : "recherche Google en attente";
+  if (!s) {
+    if (!follows.length) {
+      list.innerHTML = `<p class="empty">Aucun sujet suivi pour l'instant. Dans « Infos majeures », touche « suivre ce sujet » sous une info ; ou crée un sujet avec le bouton ci-dessus, par exemple « retraites ».</p>`;
+      return;
+    }
+    const lastT = f => f.items.length ? f.items[f.items.length - 1].t : f.c;
+    list.innerHTML = follows.slice().sort((a, b) => unseenOf(b) - unseenOf(a) || lastT(b) - lastT(a)).map(f => {
+      const last = f.items[f.items.length - 1], nv = unseenOf(f);
+      const when = last ? (fmtDay.format(last.t) === fmtDay.format(now) ? hm(last.t) : fmtDM.format(last.t)) : "";
+      return `<article class="d"><time datetime="${new Date(lastT(f)).toISOString()}">${when}</time><div>`
+        + `<div class="meta"><span class="src">${f.items.length} article${f.items.length > 1 ? "s" : ""}</span>`
+        + (nv ? `<span class="tg svn">${nv} nouveau${nv > 1 ? "x" : ""}</span>` : "") + `<span>${esc(gState(f))}</span></div>`
+        + `<h2><button type="button" class="open" data-open="${esc(f.id)}">${esc(f.name)}</button></h2>`
+        + (last ? `<div class="latest"><div class="lbl">Dernier développement · ${esc(dayShort(last.t))}${hm(last.t)} · ${esc(last.s)}</div>`
+            + `<a href="${esc(last.l)}" target="_blank" rel="noopener noreferrer">${esc(last.ti)}</a></div>`
+          : `<p>Rien pour l'instant : le dossier se remplira avec les prochaines dépêches.</p>`)
+        + `<div class="terms">Mots suivis : ${esc(f.q)}</div></div></article>`;
+    }).join("");
+    return;
+  }
+  // Dossier d'un sujet : du plus récent au plus ancien, « Nouveau » pour ce qui est arrivé depuis la dernière visite.
+  // Lu jusqu'au dernier article arrivé : rien ne change (ni n'est renvoyé aux autres appareils) tant qu'il n'y a rien de neuf.
+  const newest = s.items.reduce((m, x) => Math.max(m, x.a || 0), 0);
+  if (!document.hidden && newest > (s.seen || 0)) { s.seen = newest; saveFollowsSoon(); }
+  const xs = s.items.filter(x => !ui.q.length || ui.q.every(w => (norm(x.ti) + " " + norm(x.s)).includes(w))).sort((a, b) => b.t - a.t);
+  const media = new Set(s.items.map(x => x.s)).size;
+  let html = `<div class="dos"><div><button type="button" class="linkbtn" data-act="back">← Tous les sujets suivis</button></div>`
+    + `<h2>${esc(s.name)}</h2>`
+    + `<p class="hint">${s.items.length} article${s.items.length > 1 ? "s" : ""} de ${media} média${media > 1 ? "s" : ""}`
+    + (s.items.length ? ` depuis le ${esc(fmtDayLong.format(s.items[0].t))}` : "") + ` · mots suivis : ${esc(s.q)} · ${esc(gState(s))}</p>`
+    + `<div class="actions"><button class="btn" type="button" data-act="edit">Modifier</button><button class="btn" type="button" data-act="export"${s.items.length ? "" : " disabled"}>Exporter le dossier</button></div></div>`;
+  let lastDay = "";
+  for (const x of xs) {
+    const day = fmtDay.format(x.t);
+    if (day !== lastDay) { html += `<h3 class="day">${esc(dayLabel(x.t))}</h3>`; lastDay = day; }
+    const isNew = x.a > ui.seenRef;
+    html += `<article class="d${isNew ? " nw" : ""}"><time datetime="${new Date(x.t).toISOString()}" title="${esc(fmtFull.format(x.t))}">${hm(x.t)}</time><div>`
+      + `<div class="meta"><span class="src">${esc(x.s)}</span>${x.v === "g" ? "<span>via recherche Google</span>" : ""}${isNew ? `<span class="tg nwt">Nouveau</span>` : ""}</div>`
+      + `<h2><a href="${esc(x.l)}" target="_blank" rel="noopener noreferrer">${esc(x.ti)}</a></h2></div></article>`;
+  }
+  if (!xs.length) html += `<p class="empty">${s.items.length ? "Aucun article de ce dossier ne correspond au filtre." : "Le dossier est vide pour l'instant. Il se remplira avec les prochaines dépêches qui citent ces mots."}</p>`;
+  list.innerHTML = html;
+}
+function openDossier(id) {
+  const s = follows.find(x => x.id === id); if (!s) return;
+  ui.rub = "Suivis"; ui.suivi = id; ui.seenRef = s.seen; ui.limit = PAGE;
+  const newest = s.items.reduce((m, x) => Math.max(m, x.a || 0), 0);
+  if (newest > (s.seen || 0)) { s.seen = newest; saveFollows(); }
+  render(); window.scrollTo({top: 0});
+}
+
+/* Fenêtre de suivi : création (depuis une info majeure ou à la main) et modification. */
+let followDraft = null;
+function openFollowDialog(opts) {
+  followDraft = opts || {};
+  const s = followDraft.id ? follows.find(x => x.id === followDraft.id) : null;
+  $("#suivi-title").textContent = s ? "Modifier le suivi" : "Suivre un sujet";
+  $("#suivi-name").value = s ? s.name : followDraft.name || "";
+  $("#suivi-q").value = s ? s.q : followDraft.q || "";
+  $("#suivi-g").checked = s ? !!s.g : true;
+  $("#suivi-save").textContent = s ? "Enregistrer" : "Suivre ce sujet";
+  $("#suivi-stop").hidden = !s;
+  previewFollow();
+  $("#dlg-suivi").showModal();
+}
+function previewFollow() {
+  const box = $("#suivi-preview"), alts = parseTerms($("#suivi-q").value);
+  if (!alts.length) { box.textContent = "Écris au moins un mot."; return; }
+  const hits = items.filter(it => matchAlts(alts, it.n)).sort((a, b) => b.t - a.t);
+  const seed = (followDraft && followDraft.seed || []).filter(it => !hits.includes(it)).length;
+  box.innerHTML = `${hits.length} dépêche${hits.length > 1 ? "s" : ""} de ces 48 h ${hits.length > 1 ? "contiennent" : "contient"} ces mots`
+    + (seed ? `, plus ${seed} autre${seed > 1 ? "s" : ""} de l'info majeure` : "")
+    + (hits.length ? `. Les plus récentes :<ul>${hits.slice(0, 3).map(it => `<li>${esc(it.title)} <small>(${esc(it.src)})</small></li>`).join("")}</ul>`
+      : `. Le dossier se remplira avec les prochaines dépêches${$("#suivi-g").checked ? " et la recherche Google" : ""}.`);
+}
+
+const CHIP_LABEL = {Majeures: "Infos majeures", Alertes: "Mes mots-clés", Suivis: "Sujets suivis"};
+function renderChips(counts) {
+  const names = ["Tout", ...(prefs.maj ? ["Majeures"] : []), "Alertes", "Suivis", "Cyclisme", ...RUBS.filter(r => counts[r] || r === ui.rub)];
+  // « Sujets suivis » : nombre de sujets, puis les nouveaux développements pas encore vus.
+  const nv = counts.Suivis;
+  const cls = r => r === "Alertes" ? " al" : r === "Majeures" ? " mj" : r === "Suivis" ? " sv" + (nv ? " has" : "") : "";
+  const num = r => r === "Suivis" ? follows.length + (nv ? ` · ${nv} nouveau${nv > 1 ? "x" : ""}` : "") : counts[r] || 0;
+  $("#chips").innerHTML = names.map(r =>
+    `<button type="button" class="chip${cls(r)}" data-rub="${esc(r)}" aria-pressed="${r === ui.rub}">${esc(CHIP_LABEL[r] || r)}<span>${num(r)}</span></button>`
+  ).join("");
+}
+
+let lastCount = 0;
+function updateStatus(count) {
+  if (typeof count === "number") lastCount = count;
+  const active = feeds.filter(f => !isMutedName(f.n) && !(prefs.fr && f.l !== "fr") && !dormant(f));
+  const ok = active.filter(f => f.st === "ok").length;
+  const err = active.filter(f => f.st === "err").length;
+  const waiting = active.filter(f => f.st === "wait").length;
+  const fresh = items.filter(it => it.fresh && Date.now() - it.arr < FRESH_MARK).length;
+  let s = (navigator.onLine ? `<span><b>${ok}</b>/${active.length} flux${err ? ` · ${err} en échec` : ""}${waiting ? ` · ${waiting} en attente` : ""}</span>` : `<span><b>Hors connexion</b> · dépêches enregistrées</span>`)
+    + `<span><b>${lastCount.toLocaleString("fr-FR")}</b> dépêches sur ${prefs.hours} h</span>`
+    + (ui.lastPoll ? `<span class="opt">relevé ${fmtHMS.format(ui.lastPoll)}</span>` : "")
+    + (!syncSt.cle ? "" : syncSt.st === "err" ? `<span class="syncerr" title="${esc(syncSt.err)}">synchro en échec</span>` : syncSt.at ? `<span class="opt">synchro ${hm(syncSt.at)}</span>` : "")
+    + (fresh ? `<button class="linkbtn" type="button" id="mark-read">Tout marquer lu (${fresh})</button>` : "");
+  $("#status").innerHTML = s;
+  $("#src-count").textContent = `${ok}/${active.length}`;
+}
+function updatePill() {
+  const p = $("#pill");
+  p.hidden = !ui.held;
+  p.textContent = `↑ ${ui.held} nouvelle${ui.held > 1 ? "s" : ""} dépêche${ui.held > 1 ? "s" : ""}`;
+}
+function updateTitle() { document.title = ui.unseen ? `(${ui.unseen}) Le Fil` : "Le Fil"; }
+function updateLive() {
+  const off = !navigator.onLine || paused();
+  $("#live").classList.toggle("off", off);
+  $("#live-txt").textContent = !navigator.onLine ? "Hors ligne" : off ? "En pause" : "En direct";
+}
+
+/* ---------- Sources ---------- */
+const groups = new Map();
+for (const f of feeds) {
+  const names = f.sites ? Object.values(f.sites).map(m => m.n) : [f.n];
+  for (const n of names) { if (!groups.has(n)) groups.set(n, []); groups.get(n).push(f); }
+}
+const groupNames = [...groups.keys()].sort((a, b) => a.localeCompare(b, "fr", {sensitivity: "base"}));
+
+function buildSources() {
+  const nGoogle = feeds.filter(f => f.g).length;
+  $("#sources-sum").textContent = `${groupNames.length} médias (ta revue de presse, plus ${SPE_SRC.size} titres de presse vélo pour la vue Cyclisme), relevés par ${feeds.length} flux. ${nGoogle} requêtes passent par Google Actualités, pour les médias qui n'ont pas de flux à eux : Google refuse souvent le relais, ces médias peuvent donc manquer. Décoche un média pour ne plus l'afficher (sur tous tes appareils si la synchronisation est active).`;
+  $("#src-body").innerHTML = groupNames.map((name, idx) => {
+    const fs = groups.get(name);
+    const rubs = [...new Set(fs.map(f => f.r))].join(", ");
+    const via = fs.every(f => f.g) ? (fs.some(f => f.sites) ? "via Google Actualités (requête groupée)" : "via Google Actualités") : fs.length > 1 ? `${fs.length} flux` : "";
+    return `<tr data-name="${esc(name)}"><td><input type="checkbox" id="src-${idx}" data-name="${esc(name)}"></td>`
+      + `<td><label for="src-${idx}">${esc(name)}</label>${via ? `<small>${via}</small>` : ""}${fs.some(f => f.q) ? `<small>au plus ${Math.max(...fs.map(f => f.q || 0))} dépêches par 24 h</small>` : ""}</td>`
+      + `<td>${esc(rubs)}</td><td class="tier"></td><td class="st"></td></tr>`;
+  }).join("");
+  renderSources();
+}
+function renderSources() {                         // met à jour les états sans reconstruire le tableau
+  for (const tr of $("#src-body").rows) {
+    const name = tr.dataset.name, fs = groups.get(name);
+    const muted = isMutedName(name), foreign = prefs.fr && fs[0].l !== "fr";
+    const live = fs.filter(f => !dormant(f));
+    const ok = live.filter(f => f.st === "ok"), err = live.filter(f => f.st === "err");
+    const fb = fs.some(f => f.useFb);
+    let cls = "wait", st = "en attente", tip = "";
+    if (muted) { cls = "off"; st = "coupé"; }
+    else if (foreign) { cls = "off"; st = "hors français"; }
+    else if (!live.length) {
+      const host = feeds.find(o => o.useFb && o.b === fs[0].b && !dormant(o));
+      cls = host && host.st === "ok" ? "ok" : "wait";
+      st = `couvert par le secours Google de ${host ? host.n : "ce site"}`;
+    }
+    else if (err.length && !ok.length) { cls = "err"; st = "échec : " + explain(err[0].err); tip = err[0].err; }
+    else if (ok.length) {
+      cls = err.length ? "err" : "ok";
+      st = `ok · ${hm(Math.max(...ok.map(f => f.at)))}` + (err.length ? ` · ${err.length} flux sur ${live.length} en échec` : "");
+      tip = err.length ? err.map(f => explain(f.err)).join(" / ") : "";
+    }
+    if (fb && !muted && live.length) st += " · via secours Google";
+    tr.classList.toggle("muted", muted);
+    tr.cells[0].firstChild.checked = !muted;
+    tr.cells[3].textContent = TIER_LABEL[Math.min(...fs.map(f => f.t))] + (prefs.eco ? " ×3" : "");
+    const c = tr.cells[4];
+    if (c.textContent !== st) c.textContent = st;
+    c.className = "st " + cls;
+    c.title = tip;
+  }
+}
+
+/* ---------- Événements ---------- */
+$("#chips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  ui.rub = b.dataset.rub; ui.suivi = null; ui.limit = PAGE; render();
+});
+let qTimer;
+$("#q").addEventListener("input", e => {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => { ui.q = norm(e.target.value).split(/\s+/).filter(Boolean); ui.limit = PAGE; render(); }, 150);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") { e.preventDefault(); $("#q").focus(); }
+});
+$("#hours").value = String(prefs.hours);
+$("#hours").addEventListener("change", e => { prefs.hours = Number(e.target.value); savePrefs(); render(); });
+$("#more").addEventListener("click", () => { ui.limit += PAGE; render(); });
+$("#list").addEventListener("click", e => {
+  const open = e.target.closest("[data-open]");
+  if (open) { openDossier(open.dataset.open); return; }
+  const act = e.target.closest("[data-act]");
+  if (act) {
+    const s = follows.find(x => x.id === ui.suivi);
+    if (act.dataset.act === "back") { ui.suivi = null; render(); window.scrollTo({top: 0}); }
+    else if (act.dataset.act === "edit" && s) openFollowDialog({id: s.id});
+    else if (act.dataset.act === "export" && s) exportDossier(s);
+    return;
+  }
+  const b = e.target.closest(".ig"); if (!b) return;
+  const it = byKey.get(b.dataset.id); if (!it) return;
+  const ev = it.maj && it.maj.ev; if (!ev) return;
+  if (b.classList.contains("fw")) {                  // suivre ce sujet
+    if (follows.length >= FOLLOW_MAX) { alert(`Tu suis déjà ${FOLLOW_MAX} sujets : arrête d'en suivre un pour en ajouter un autre.`); return; }
+    openFollowDialog({...suggestFollow(ev), seed: ev.items});
+    return;
+  }
+  prefs.ignSig = [...(prefs.ignSig || []).filter(x => Date.now() - x.at < 7 * 864e5), {w: ev.sig, at: Date.now()}].slice(-100);
+  savePrefs();
+  journalForget(ev);
+  analyze(); render();
+});
+$("#viewbar").addEventListener("click", e => {
+  if (e.target.id === "suivi-new") {
+    if (follows.length >= FOLLOW_MAX) { alert(`Tu suis déjà ${FOLLOW_MAX} sujets : arrête d'en suivre un pour en ajouter un autre.`); return; }
+    openFollowDialog({});
+  }
+  if (e.target.id === "anki-go") {
+    const n = exportAnki(Number($("#anki-range").value));
+    $("#anki-note").textContent = n ? `${n} carte${n > 1 ? "s" : ""} exportée${n > 1 ? "s" : ""}. Dans Anki : Fichier, Importer. Elles arrivent dans le paquet « Le Fil ».` : "aucune info majeure notée sur cette période";
+  }
+});
+$("#viewbar").addEventListener("change", e => { if (e.target.id === "anki-range") renderViewbar(); });
+
+/* Suivis */
+const dlgF = $("#dlg-suivi");
+$("#suivi-q").addEventListener("input", previewFollow);
+$("#suivi-g").addEventListener("change", previewFollow);
+$("#suivi-save").addEventListener("click", () => {
+  const q = $("#suivi-q").value.trim().replace(/\s+/g, " ");
+  if (!parseTerms(q).length) { previewFollow(); $("#suivi-q").focus(); return; }
+  const name = $("#suivi-name").value.trim() || q.split(/[,;]/)[0].trim();
+  const g = $("#suivi-g").checked;
+  const cur = followDraft && followDraft.id && follows.find(x => x.id === followDraft.id);
+  let s = cur;
+  if (cur) editFollow(cur, name, q, g);
+  else {
+    if (follows.length >= FOLLOW_MAX) { $("#suivi-preview").textContent = `Tu suis déjà ${FOLLOW_MAX} sujets : arrête d'en suivre un pour en ajouter un autre.`; return; }
+    s = createFollow(name, q, g, followDraft && followDraft.seed);
+  }
+  dlgF.close();
+  if (ui.rub === "Suivis") openDossier(s.id); else render();
+  pump();
+});
+$("#suivi-stop").addEventListener("click", () => {
+  const s = followDraft && followDraft.id && follows.find(x => x.id === followDraft.id); if (!s) return;
+  if (!confirm(`Arrêter de suivre « ${s.name} » ? Son dossier sera effacé de cet appareil.`)) return;
+  stopFollow(s); dlgF.close(); render();
+});
+$("#pill").addEventListener("click", () => { window.scrollTo({top: 0, behavior: "smooth"}); release(); ui.unseen = 0; updateTitle(); });
+$("#status").addEventListener("click", e => {
+  if (e.target.id !== "mark-read") return;
+  for (const it of items) it.fresh = false;
+  ui.unseen = 0; updateTitle(); render();
+});
+window.addEventListener("scroll", () => {
+  if (window.scrollY < 40) { release(); if (!document.hidden && ui.unseen) { ui.unseen = 0; updateTitle(); } }
+}, {passive: true});
+document.addEventListener("visibilitychange", () => {
+  updateLive();
+  if (document.hidden) { saveItems(); if (followSaveTimer) saveFollows(); if (syncSt.timer) syncNow(); }
+  else if (syncSt.cle && Date.now() - syncSt.last > 20e3) syncNow();
+  if (!document.hidden) { if (atTop()) { ui.unseen = 0; updateTitle(); } pump(); }
+});
+window.addEventListener("online", () => {
+  // les flux tombés pendant la coupure sont relevés tout de suite, sans attendre leur délai d'échec
+  for (const f of feeds) if (f.st === "err" && /relais injoignable|délai/.test(f.err)) { f.next = Date.now(); f.fails = 0; }
+  updateLive(); updateStatus(); checkRelay(); pump();
+});
+window.addEventListener("offline", () => { updateLive(); updateStatus(); checkRelay(); });
+
+/* Alertes */
+const dlgA = $("#dlg-alerts");
+function notifHint() {
+  const h = $("#notif-hint");
+  if (!("Notification" in window)) { h.textContent = "Ce navigateur ne gère pas les notifications de page (c'est le cas de Safari sur iPhone). Le surlignage et le bip restent actifs."; return; }
+  h.textContent = Notification.permission === "denied"
+    ? "Les notifications sont bloquées pour ce site dans les réglages du navigateur."
+    : "Quand elles sont activées, Le Fil continue ses relevés onglet en arrière-plan (le navigateur peut les espacer).";
+}
+$("#open-alerts").addEventListener("click", () => {
+  $("#alerts-kw").value = prefs.alerts; $("#alerts-sound").checked = prefs.sound;
+  $("#maj-on").checked = prefs.maj; $("#maj-thr").value = String(prefs.majMin); $("#maj-cap").value = String(prefs.majCap);
+  $("#alerts-notif").checked = prefs.notif && "Notification" in window && Notification.permission === "granted";
+  notifHint(); dlgA.showModal();
+});
+$("#alerts-save").addEventListener("click", async () => {
+  prefs.alerts = $("#alerts-kw").value; prefs.sound = $("#alerts-sound").checked;
+  const majChanged = prefs.maj !== $("#maj-on").checked || prefs.majMin !== Number($("#maj-thr").value) || prefs.majCap !== Number($("#maj-cap").value);
+  prefs.maj = $("#maj-on").checked; prefs.majMin = Number($("#maj-thr").value); prefs.majCap = Number($("#maj-cap").value);
+  if (majChanged) { if (!prefs.maj && ui.rub === "Majeures") ui.rub = "Tout"; resetMajors(); }
+  let wantNotif = $("#alerts-notif").checked;
+  if (wantNotif && "Notification" in window && Notification.permission !== "granted") {
+    try { wantNotif = (await Notification.requestPermission()) === "granted"; } catch (e) { wantNotif = false; }
+  }
+  prefs.notif = wantNotif && "Notification" in window;
+  if (prefs.sound) beep();
+  savePrefs(); compileAlerts(); render(); updateLive(); dlgA.close();
+});
+
+/* Sources */
+const dlgS = $("#dlg-sources");
+buildSources();
+$("#open-sources").addEventListener("click", () => { $("#opt-fr").checked = prefs.fr; $("#opt-eco").checked = prefs.eco; renderSources(); renderSyncUI(); dlgS.showModal(); });
+$("#sync-on").addEventListener("click", () => {
+  const cle = $("#sync-key").value.trim().replace(/^.*[?&]cle=/, "").replace(/[&#].*$/, "");   // accepte aussi le lien entier
+  if (cle.length < 16) { $("#sync-state").textContent = "Cette clé est trop courte : copie-la en entier, ou colle le lien personnel."; return; }
+  $("#sync-key").value = "";
+  activateSync(cle);
+});
+$("#sync-go").addEventListener("click", () => syncNow());
+$("#sync-stop").addEventListener("click", () => {
+  if (!confirm("Désactiver la synchronisation sur cet appareil ? Rien n'est effacé : ni ici, ni sur tes autres appareils.")) return;
+  stopSync();
+});
+$("#sources-close").addEventListener("click", () => dlgS.close());
+$("#src-body").addEventListener("change", e => {
+  const name = e.target.dataset.name; if (!name) return;
+  prefs.muted = e.target.checked ? prefs.muted.filter(n => n !== name) : [...new Set([...prefs.muted, name])];
+  savePrefs(); renderSources(); render(); pump();
+});
+$("#opt-fr").addEventListener("change", e => { prefs.fr = e.target.checked; savePrefs(); renderSources(); render(); pump(); });
+$("#opt-eco").addEventListener("change", e => {
+  prefs.eco = e.target.checked; savePrefs();
+  for (const f of feeds) if (f.st !== "wait") f.next = f.at + interval(f);
+  renderSources(); pump();
+});
+$("#export").addEventListener("click", () => {
+  const data = {
+    version: Number(VERSION), exporte_le: new Date().toISOString(),
+    reglages: {majMin: prefs.majMin, majCap: prefs.majCap, maj: prefs.maj, coupes: prefs.muted, ignores: (prefs.ignSig || []).length},
+    flux: feeds.map(f => ({media: f.n, url: f.u, etat: f.st, erreur: f.err, secours: f.useFb, articles: f.cnt})),
+    depeches: items.slice().sort((a, b) => b.t - a.t).map(it => ({heure: new Date(it.t).toISOString(), media: it.src, titre: it.title,
+      rubrique: it.rub, une: it.une ? it.une.r : null, majeure: it.maj ? (it.maj.rep ? "tete" : "suite") : null,
+      lien: it.link.slice(0, 160), chapo: (it.sum || "").slice(0, 220), lot: !!it.bulk, verif: it.dq || null, verif_par: it.dqBy || (it.dq === "ok" ? "page" : null), verif_erreur: it.dqErr || null})),
+    infos_majeures: events.map(ev => ({titre: ev.rep.title, depart: ev.origin ? ev.origin.title : null, medias: ev.n, pic_3h: ev.peak, une: Number.isFinite(ev.une) ? ev.une : null, pourquoi: ev.why})),
+    journal_majeures: journal.length,
+    fiches: journal.filter(e => Date.now() - e.last < 2 * 864e5).map(e => ficheOf(e)),
+    synchro: {active: !!syncSt.cle, etat: syncSt.st, erreur: syncSt.err, dernier_echange: syncSt.at ? new Date(syncSt.at).toISOString() : null},
+    suivis: follows.map(s => ({nom: s.name, mots: s.q, articles: s.items.length, nouveaux: unseenOf(s), google: s.g, etat_google: s.st, erreur_google: s.err}))
+  };
+  download(JSON.stringify(data), `le-fil-${fmtDay.format(Date.now())}.json`, "application/json");
+});
+$("#all-on").addEventListener("click", () => { prefs.muted = []; savePrefs(); renderSources(); render(); pump(); });
+$("#all-off").addEventListener("click", () => { prefs.muted = [...new Set(feeds.map(f => f.n))]; savePrefs(); renderSources(); render(); });
+for (const d of [dlgA, dlgS, dlgF]) d.addEventListener("click", e => { if (e.target === d) d.close(); });
+
+/* ---------- Démarrage ---------- */
+const tickClock = () => { $("#clock").textContent = fmtHMS.format(Date.now()); };
+tickClock(); setInterval(tickClock, 1000);
+setInterval(pump, 1000);
+setInterval(() => {                                  // expiration des étiquettes « Nouveau », changement de jour
+  runAnalysis();
+  if (atTop() && !document.hidden) render(); else updateStatus();
+}, 30e3);
+setInterval(() => {                                  // purge au-delà de 48 h
+  const minT = Date.now() - MAX_AGE_H * 3600e3;
+  for (let i = items.length - 1; i >= 0; i--) if (items[i].t < minT) {
+    const it = items.splice(i, 1)[0];
+    for (const [k, v] of byKey) if (v === it) byKey.delete(k);
+  }
+}, 10 * 60e3);
+window.addEventListener("pagehide", () => { saveItems(); if (followSaveTimer) saveFollows(); });
+setInterval(saveItems, 60e3);
+compileAlerts(); restoreItems(); loadFollows();
+for (const it of items) followCheck(it, true);       // mémoire relue : rien de « nouveau » à ce stade
+if (CADENCE) window.__lefil = {follows: () => follows, journal: () => journal, items: () => items, events: () => events, sync: () => syncSt, prefs: () => prefs,
+  canon: () => ({prefs: canonPrefs(prefs), vus: canonVus(localVus()), suivis: follows.map(canonFollow).sort(), journal: [...new Set(journal.map(e => e.d))].sort().map(localDay)})};
+setInterval(() => { if (!document.hidden) syncNow(); }, SYNC_EVERY);
+if (syncSt.cle) syncNow();
+markBulk(); updateLive(); runAnalysis(); render(); pump(); checkRelay();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
