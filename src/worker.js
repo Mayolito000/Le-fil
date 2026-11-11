@@ -5,7 +5,8 @@
  * public/, intégrés au Worker au moment de la mise en ligne (règles « rules » de wrangler.jsonc).
  * Le Worker sert ces fichiers, et répond aux adresses suivantes :
  *   /fil et /direct  dépêches relevées en continu par le Releveur (src/releveur.js) : rattrapage, puis direct ;
- *   /push/…      notifications sur le téléphone (infos majeures repérées par le Releveur, même page fermée) ;
+ *   /push/…      notifications sur le téléphone (infos majeures, sujets suivis, mots-clés, point du matin, panne) ;
+ *   /recherche?q=…  recherche dans les titres des 30 derniers jours ;
  *   /rss?url=…   va chercher un flux RSS à la place du navigateur (sujets suivis, secours si le Releveur est indisponible) ;
  *   /date?url=…  lit l'heure de publication d'un article dans sa page ;
  *   /sync        synchronisation entre appareils (base D1 « DB », clé personnelle) ;
@@ -319,7 +320,7 @@ export default {
     if (url.pathname === "/sync") return sync(request, env);
     if (url.pathname === "/fil" || url.pathname === "/direct") return releveur(env).fetch(request);
     // Notifications push : clé publique pour s'abonner, puis abonnement, essai, désabonnement
-    if (url.pathname.startsWith("/push/")) return releveur(env).fetch(request);
+    if (url.pathname.startsWith("/push/") || url.pathname === "/recherche") return releveur(env).fetch(request);
     if (request.method !== "GET" && request.method !== "HEAD") {
       return text("Méthode non prise en charge", 405);
     }

@@ -3,9 +3,9 @@
  *   si le réseau tarde plus de 2,5 s (la nouvelle version est prise au passage pour la fois suivante) ;
  * - icônes, manifeste et polices sont gardés en mémoire ;
  * - les relevés (/rss, /date, /sync…) ne passent jamais par ce cache : toujours en direct. */
-const CACHE = "lefil-20";
+const CACHE = "lefil-21";
 const SHELL = ["/", "/manifest.webmanifest", "/icon-180.png", "/icon-192.png", "/icon-512.png"];
-const DIRECT = /^\/(rss|date|sync|sante|veille|notif-test)\b/;
+const DIRECT = /^\/(rss|date|sync|sante|veille|notif-test|fil|direct|push|recherche)\b/;
 const POLICES = /^https:\/\/fonts\.(googleapis|gstatic)\.com$/;
 
 self.addEventListener("install", e => {

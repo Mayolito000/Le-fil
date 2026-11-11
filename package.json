@@ -1,12 +1,13 @@
 {
   "name": "le-fil",
-  "version": "18.0.0",
+  "version": "21.0.0",
   "description": "Le Fil : fil d'actualité en direct, relais Cloudflare Worker",
   "scripts": {
     "construire": "python3 outils/construire.py",
     "test-local": "wrangler dev --env test",
     "deployer-test": "python3 outils/construire.py && wrangler deploy --env test",
-    "deployer": "python3 outils/construire.py && wrangler deploy"
+    "deployer": "python3 outils/construire.py && wrangler deploy",
+    "test": "node --test tests/*.test.mjs && python3 outils/construire.py --verifier"
   },
   "devDependencies": {
     "wrangler": "^4.160.0"

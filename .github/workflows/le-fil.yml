@@ -1,0 +1,58 @@
+# Le Fil : tests à chaque modification, mise en ligne automatique quand main change.
+#
+# Pour la mise en ligne, deux secrets du dépôt (Settings > Secrets and variables > Actions) :
+#   CLOUDFLARE_API_TOKEN   jeton Cloudflare, modèle « Modifier les Workers Cloudflare »
+#   CLOUDFLARE_ACCOUNT_ID  identifiant du compte Cloudflare (tableau de bord, colonne de droite)
+# Sans eux, les tests tournent quand même ; seule la mise en ligne est sautée.
+name: Le Fil
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: le-fil-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests (lecture des flux, repérage, notifications, page) et fichiers générés à jour
+        run: npm test
+      - name: Construction du Worker (sans le mettre en ligne)
+        run: npx wrangler deploy --env="" --dry-run --outdir dist
+        env:
+          WRANGLER_SEND_METRICS: "false"
+
+  mise-en-ligne:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      JETON_PRESENT: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Mise en ligne sur Cloudflare
+        if: env.JETON_PRESENT == 'true'
+        run: npx wrangler deploy --env=""
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+      - name: Pas de jeton Cloudflare
+        if: env.JETON_PRESENT != 'true'
+        run: echo "::warning::Mise en ligne sautée — ajoute les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID au dépôt (voir l'en-tête de ce fichier)."
