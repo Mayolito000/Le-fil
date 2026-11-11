@@ -31,3 +31,14 @@ test("liste des flux valide : adresses uniques, rangs et pages d'accueil", () =>
   }
   assert.ok(flux.filter(f => f.pa).length >= 3, "au moins 3 pages d'accueil");
 });
+
+test("chaque flux a une rubrique que la page connaît", () => {
+  const flux = JSON.parse(readFileSync(new URL("../flux.json", import.meta.url), "utf8"));
+  const rubs = new Set([...JSON.parse(/^const RUBS = (\[.*\]);$/m.exec(page)[1]), "Cyclisme"]);
+  for (const f of flux) {
+    assert.ok(rubs.has(f.r), `${f.n} : rubrique inconnue « ${f.r} »`);
+    for (const s of Object.values(f.sites || {})) assert.ok(rubs.has(s.r), `${s.n} : rubrique inconnue « ${s.r} »`);
+    assert.ok(["fr", "en", "es", "it", "de", "nl"].includes(f.l), `${f.n} : langue « ${f.l} »`);
+    if (f.q !== undefined) assert.ok(Number.isInteger(f.q) && f.q > 0, `${f.n} : plafond`);
+  }
+});
