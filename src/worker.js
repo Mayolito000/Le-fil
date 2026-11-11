@@ -4,7 +4,8 @@
  * La page, le service worker, les icônes, le manifeste et le modèle Anki sont des fichiers du dossier
  * public/, intégrés au Worker au moment de la mise en ligne (règles « rules » de wrangler.jsonc).
  * Le Worker sert ces fichiers, et répond aux adresses suivantes :
- *   /rss?url=…   va chercher un flux RSS à la place du navigateur (qui n'a pas le droit de le lire) ;
+ *   /fil et /direct  dépêches relevées en continu par le Releveur (src/releveur.js) : rattrapage, puis direct ;
+ *   /rss?url=…   va chercher un flux RSS à la place du navigateur (sujets suivis, secours si le Releveur est indisponible) ;
  *   /date?url=…  lit l'heure de publication d'un article dans sa page ;
  *   /sync        synchronisation entre appareils (base D1 « DB », clé personnelle) ;
  *   /sante       vérification que le relais répond ;
@@ -18,6 +19,7 @@
  *   NTFY_TOPIC sujet ntfy des notifications sur téléphone (facultatif).
  */
 import {ALLOWED_HOSTS, ARTICLE_DOMAINS} from "./hotes.js";
+export {Releveur} from "./releveur.js";
 import PAGE from "../public/index.html";
 import SW from "../public/sw.js";
 import MANIFEST from "../public/manifest.webmanifest";
@@ -209,7 +211,7 @@ async function sync(request, env) {
  * Chaque sujet nouveau est envoyé une seule fois sur le téléphone, via l'appli gratuite ntfy (sujet NTFY_TOPIC).
  * La liste de ce qui a déjà été envoyé est relue chez ntfy (12 dernières heures) : pas de base à créer. */
 const UNE_URL = "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr";
-const ALERT_FEEDS = [["BFMTV", "https://www.bfmtv.com/rss/news-24-7/"], ["franceinfo", "https://www.francetvinfo.fr/titres.rss"]];
+const ALERT_FEEDS = [["BFMTV", "https://www.bfmtv.com/rss/news-24-7/"], ["franceinfo", "https://www.franceinfo.fr/titres.rss"]];
 const PUSH_TOP = 3;            // les 3 premiers sujets « À la une »
 const PUSH_MAX_12H = 8;        // au plus 8 notifications « à la une » par tranche de 12 h
 const NUIT = [23, 7];          // pas de notification « à la une » entre 23 h et 7 h (les ALERTE passent toujours)
@@ -301,14 +303,20 @@ async function veille(env, opts = {}) {
 }
 
 /* ================== AIGUILLAGE ================== */
+// Un seul Releveur, installé en Europe de l'Ouest (près des médias et de toi).
+const releveur = env => env.RELEVEUR.get(env.RELEVEUR.idFromName("fil"), {locationHint: "weur"});
+
 export default {
+  // Tâche planifiée (toutes les 10 min) : vérifie seulement que la relève continue de tourner.
+  // La veille ntfy (fonction veille plus haut) n'est pas branchée : il faudrait l'ajouter ici.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(veille(env));
+    ctx.waitUntil(releveur(env).fetch("https://releveur/reveil"));
   },
 
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/sync") return sync(request, env);
+    if (url.pathname === "/fil" || url.pathname === "/direct") return releveur(env).fetch(request);
     if (request.method !== "GET" && request.method !== "HEAD") {
       return text("Méthode non prise en charge", 405);
     }

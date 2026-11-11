@@ -15,10 +15,17 @@
     { "type": "Data", "globs": ["**/*.png", "**/*.apkg"], "fallthrough": true }
   ],
   "d1_databases": [{ "binding": "DB", "database_name": "le-fil", "database_id": "4a563326-ad2f-44f3-90f8-416f6c03ce1b" }],
+  // Releveur : relève les flux en continu (Durable Object à base SQLite, inclus dans l'offre gratuite)
+  "durable_objects": { "bindings": [{ "name": "RELEVEUR", "class_name": "Releveur" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Releveur"] }],
+  "triggers": { "crons": ["*/10 * * * *"] },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "env": {
     "test": {
       "d1_databases": [{ "binding": "DB", "database_name": "le-fil", "database_id": "4a563326-ad2f-44f3-90f8-416f6c03ce1b" }],
+      "durable_objects": { "bindings": [{ "name": "RELEVEUR", "class_name": "Releveur" }] },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Releveur"] }],
+      "triggers": { "crons": ["*/10 * * * *"] },
       "observability": { "enabled": true, "head_sampling_rate": 1 }
     }
   }
