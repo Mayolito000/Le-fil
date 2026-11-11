@@ -20,6 +20,8 @@
   "durable_objects": { "bindings": [{ "name": "RELEVEUR", "class_name": "Releveur" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Releveur"] }],
   "triggers": { "crons": ["*/10 * * * *"] },
+  // Adresse du site, déclarée aux services de notification (les clés de notification sont dans la base du Releveur)
+  "vars": { "SITE": "https://le-fil.mayeulstms.workers.dev" },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "env": {
     "test": {
@@ -27,7 +29,7 @@
       "durable_objects": { "bindings": [{ "name": "RELEVEUR", "class_name": "Releveur" }] },
       "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Releveur"] }],
       // Au repos par défaut : la version de test ne relève rien tant qu'on ne met pas RELEVE à "oui"
-      "vars": { "RELEVE": "non" },
+      "vars": { "RELEVE": "non", "SITE": "https://le-fil-test.mayeulstms.workers.dev" },
       "triggers": { "crons": [] },
       "observability": { "enabled": true, "head_sampling_rate": 1 }
     }

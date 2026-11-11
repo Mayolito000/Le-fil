@@ -13,6 +13,8 @@
  */
 import {DurableObject} from "cloudflare:workers";
 import FLUX from "../flux.json";
+import {versItem, marquerLots, analyser} from "./majeures.js";
+import {envoyer, endpointValide, nouvellesCles} from "./webpush.js";
 
 const UA = "Mozilla/5.0 (compatible; LeFil/1.0; lecteur RSS personnel)";
 const RYTHME = {1: 30e3, 2: 60e3, 3: 120e3, 4: 300e3};   // délai entre deux lectures d'un flux, selon son rang t
@@ -80,6 +82,11 @@ function explique(statut, google) {
   if (google && (statut === 503 || statut === 429)) return `Google Actualités refuse le relais pour l'instant (${statut})`;
   return "Le média a répondu " + statut;
 }
+function heureParis(t) {
+  const p = new Intl.DateTimeFormat("en-GB", {timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23"}).formatToParts(t).find(x => x.type === "hour");
+  return p ? Number(p.value) : 12;
+}
+const json = (o, status) => new Response(JSON.stringify(o), {status: status || 200, headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
 const mediane = a => { if (!a || !a.length) return null; const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };
 
 export class Releveur extends DurableObject {
@@ -94,6 +101,7 @@ export class Releveur extends DurableObject {
       this.sql.exec("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
       this.sql.exec("CREATE TABLE IF NOT EXISTS cles (u TEXT PRIMARY KEY, v TEXT NOT NULL)");
       this.sql.exec("CREATE TABLE IF NOT EXISTS entrees (seq INTEGER PRIMARY KEY AUTOINCREMENT, u TEXT NOT NULL, vu INTEGER NOT NULL, l TEXT NOT NULL, d TEXT NOT NULL)");
+      this.sql.exec("CREATE TABLE IF NOT EXISTS abonnes (endpoint TEXT PRIMARY KEY, j TEXT NOT NULL)");
       const row = this.sql.exec("SELECT v FROM meta WHERE k = 'etat'").toArray()[0];
       this.etat = row ? JSON.parse(row.v) : {epoch: crypto.randomUUID().slice(0, 8), flux: {}, purge: 0};
       if (!row) this.sauver();
@@ -148,6 +156,13 @@ export class Releveur extends DurableObject {
     if (nouv.length) {
       for (const [u, e] of nouv) this.sql.exec("INSERT INTO entrees (u, vu, l, d) VALUES (?, ?, ?, ?)", u, e.v, e.l, JSON.stringify(e));
       seq = this.seqMax();
+      if (this.items) for (const [u, e] of nouv) this.ajouterItem(u, e);
+      this.aAnalyser = true;
+    }
+    // Infos majeures : au plus une analyse par minute, et seulement s'il y a du nouveau
+    if (this.aAnalyser && now - (this.derniereAnalyse || 0) >= 60e3) {
+      this.aAnalyser = false; this.derniereAnalyse = now;
+      try { await this.infosMajeures(now); } catch (e) { console.error("infos majeures", e && e.stack || String(e)); }
     }
     if (now - (this.etat.purge || 0) > 3600e3) {        // une fois par heure : on oublie ce qui a plus de 48 h
       this.sql.exec("DELETE FROM entrees WHERE vu < ?", now - GARDE);
@@ -218,6 +233,117 @@ export class Releveur extends DurableObject {
     s.n = s.at + Math.max(iv, s.ma || 0) * (0.9 + Math.random() * 0.2);
   }
 
+  /* ---------- Infos majeures et notifications push ---------- */
+  chargerItems() {
+    if (this.items) return;
+    this.items = []; this.vus = new Map();
+    for (const r of this.sql.exec("SELECT u, d FROM entrees ORDER BY seq").toArray()) this.ajouterItem(r.u, JSON.parse(r.d));
+  }
+  ajouterItem(u, e) {
+    const it = versItem(PARMI.get(u), e);
+    if (!it || this.vus.has(it.ku) || this.vus.has(it.id)) return;
+    this.vus.set(it.ku, it); this.vus.set(it.id, it); this.items.push(it);
+  }
+  // Réglages des infos majeures (seuil, plafond, médias coupés, sujets ignorés) : ceux que la page
+  // synchronise entre tes appareils (base D1, document « prefs »), relus toutes les 10 minutes.
+  async reglages() {
+    if (this.reg && Date.now() - this.reg.at < 600e3) return this.reg.p;
+    let p = {maj: true, majMin: 6, majCap: 10, muted: [], fr: false, ignSig: []};
+    try { const r = await this.env.DB.prepare("SELECT v FROM lefil_sync WHERE k = 'prefs'").first(); if (r) p = {...p, ...JSON.parse(r.v)}; } catch (e) {}
+    this.reg = {at: Date.now(), p};
+    return p;
+  }
+  async infosMajeures(now) {
+    this.chargerItems();
+    if (this.items.length && now - this.items[0].t > GARDE + 3600e3) {          // ménage : plus de 48 h
+      this.items = this.items.filter(i => now - i.t <= GARDE);
+      this.vus = new Map(); for (const i of this.items) { this.vus.set(i.ku, i); this.vus.set(i.id, i); }
+    }
+    marquerLots(this.items);
+    const prefs = await this.reglages();
+    const evs = analyser(this.items, prefs, now);
+    const notif = this.etat.notifies || (this.etat.notifies = {});
+    const premier = !this.etat.notifInit;             // tout premier passage : ce qui existe déjà n'est pas annoncé
+    const nouveaux = [];
+    for (const ev of evs) {
+      const deja = ev.items.some(i => notif[i.id]);
+      for (const i of ev.items) notif[i.id] = notif[i.id] || now;
+      const montre = !(prefs.muted || []).includes(ev.rep.src) && (!prefs.fr || ev.rep.lang === "fr");
+      if (!deja && !premier && montre && now - ev.last < 3 * 3600e3) nouveaux.push(ev);
+    }
+    this.etat.notifInit = true;
+    this.etat.analyse = {at: now, evenements: evs.length, depeches: this.items.length};
+    for (const [k, t] of Object.entries(notif)) if (now - t > GARDE) delete notif[k];
+    if (nouveaux.length) { await this.pousser(nouveaux.slice(0, 2), now); this.sauver(); this.sauve = now; }
+  }
+  // Clés VAPID du serveur : créées au premier besoin, gardées dans sa base (jamais ailleurs)
+  async clesVapid() {
+    if (this.vapid) return this.vapid;
+    const row = this.sql.exec("SELECT v FROM meta WHERE k = 'vapid'").toArray()[0];
+    if (row) return (this.vapid = JSON.parse(row.v));
+    this.vapid = await nouvellesCles();
+    this.sql.exec("INSERT OR REPLACE INTO meta (k, v) VALUES ('vapid', ?)", JSON.stringify(this.vapid));
+    return this.vapid;
+  }
+  abonnes() { return this.sql.exec("SELECT endpoint, j FROM abonnes").toArray().map(r => ({endpoint: r.endpoint, ...JSON.parse(r.j)})); }
+  garderAbonne(a) { const {endpoint, ...j} = a; this.sql.exec("INSERT OR REPLACE INTO abonnes (endpoint, j) VALUES (?, ?)", endpoint, JSON.stringify(j)); }
+  async pousser(evs, now) {
+    const abos = this.abonnes(); if (!abos.length) return;
+    const cles = await this.clesVapid();
+    const h = heureParis(now), nuit = h >= 23 || h < 7;
+    for (const ev of evs) {
+      const message = {titre: ev.urgent ? "Le Fil · urgent" : `Le Fil · info majeure (${ev.n} médias)`,
+        texte: `${ev.rep.title}\n${ev.rep.src} · ${ev.why.join(", ")}`, lien: ev.rep.link, tag: "maj-" + ev.sig.join("-")};
+      const fort = ev.urgent || (ev.grave && ev.peak >= 6);
+      for (const a of abos) {
+        if (a.nuit && nuit && !fort) continue;      // la nuit, seulement l'urgent
+        a.envois = (a.envois || []).filter(t => now - t < 864e5);
+        if (a.envois.length >= 20) continue;          // garde-fou : 20 notifications par 24 h au plus
+        const st = await envoyer(a, message, cles, this.env.SITE || "https://le-fil.workers.dev").catch(() => 0);
+        if (st === 404 || st === 410) { this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", a.endpoint); a.parti = true; continue; }
+        if (st >= 200 && st < 300) { a.envois.push(now); this.garderAbonne(a); }
+        else console.error("push refusé", st, new URL(a.endpoint).hostname);
+      }
+      // journal des dernières infos majeures annoncées (montré dans la fenêtre Alertes)
+      (this.etat.envoyes = (this.etat.envoyes || []).slice(-9)).push({t: now, titre: ev.rep.title, src: ev.rep.src, n: ev.n, lien: ev.rep.link});
+    }
+  }
+  async gererPush(request, url) {
+    if (url.pathname === "/push/cle") return json({cle: (await this.clesVapid()).publique});
+    if (url.pathname === "/push/etat") return json({appareils: this.abonnes().length, analyse: this.etat.analyse || null,
+      envoyes: (this.etat.envoyes || []).slice().reverse(), releve: actif(this.env)});
+    if (request.method !== "POST") return json({erreur: "POST attendu"}, 405);
+    const brut = await request.text();
+    if (brut.length > 4000) return json({erreur: "trop long"}, 413);
+    let q; try { q = JSON.parse(brut); } catch (e) { return json({erreur: "illisible"}, 400); }
+    if (url.pathname === "/push/abonner") {
+      const sub = q && q.sub;
+      if (!sub || !endpointValide(sub.endpoint) || !sub.keys || !/^[\w-]{80,100}$/.test(sub.keys.p256dh || "") || !/^[\w-]{16,32}$/.test(sub.keys.auth || ""))
+        return json({erreur: "abonnement invalide"}, 400);
+      const abos = this.abonnes();
+      const ancien = abos.find(a => a.endpoint === sub.endpoint);
+      if (!ancien && abos.length >= 30) {           // au plus 30 appareils : on oublie le plus ancien
+        const vieux = abos.sort((a, b) => a.at - b.at)[0]; this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", vieux.endpoint);
+      }
+      this.garderAbonne({endpoint: sub.endpoint, keys: {p256dh: sub.keys.p256dh, auth: sub.keys.auth}, nuit: q.nuit !== false,
+        at: ancien ? ancien.at : Date.now(), envois: ancien ? ancien.envois || [] : []});
+      return json({ok: true, appareils: Math.min(30, abos.length + (ancien ? 0 : 1))});
+    }
+    if (url.pathname === "/push/desabonner") {
+      this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", String(q && q.endpoint || ""));
+      return json({ok: true});
+    }
+    if (url.pathname === "/push/essai") {
+      const a = this.abonnes().find(x => x.endpoint === (q && q.endpoint));
+      if (!a) return json({erreur: "appareil inconnu : réactive les notifications"}, 404);
+      const st = await envoyer(a, {titre: "Le Fil", texte: "Les notifications marchent : tu seras prévenu ici des infos majeures, même Le Fil fermé.",
+        lien: this.env.SITE || "/", tag: "essai"}, await this.clesVapid(), this.env.SITE || "https://le-fil.workers.dev", {ttl: 600}).catch(e => String(e));
+      if (st === 404 || st === 410) this.sql.exec("DELETE FROM abonnes WHERE endpoint = ?", a.endpoint);
+      return json({ok: st >= 200 && st < 300, statut: st});
+    }
+    return json({erreur: "introuvable"}, 404);
+  }
+
   /* ---------- Rattrapage : tout ce qu'une page a manqué ---------- */
   rattrapage(depuis, epoque) {
     const complet = epoque !== this.etat.epoch;
@@ -234,6 +360,7 @@ export class Releveur extends DurableObject {
 
   async fetch(request) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/push/")) return this.gererPush(request, url);
     if (!actif(this.env)) return new Response("Relève en pause sur cette version", {status: 503});
     if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 1000);
     if (url.pathname === "/direct") {
